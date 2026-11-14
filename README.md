@@ -4,6 +4,8 @@
 
 > **Pul**se of the waters + **SAR** radar: the NISAR radar sees the Amazon breathe through the clouds — water, fire and energy.
 
+🌐 **Live demo:** https://ricardo-ramos1.github.io/pulsar-amazonia/
+
 Every year the Amazon's rivers rise and fall by more than ten meters. El Niño can turn that rhythm into extreme drought, wildfire and power shortages for millions of people. This project follows that pulse with **NISAR**, the NASA-ISRO L-band radar that sees through clouds and even detects water **beneath the forest canopy**.
 
 The app brings together four layers of evidence:
