@@ -86,6 +86,8 @@ const map = new maplibregl.Map({
   attributionControl: { compact: true },
 });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-left');
+// ?capture: hands the map to the demo-video recorder (submission/video) so it can drive the camera
+if (new URLSearchParams(location.search).has('capture')) window.__pulsarMap = map;
 const overlay = new MapboxOverlay({ interleaved: false, layers: [] });
 map.addControl(overlay);
 
@@ -321,6 +323,13 @@ function clusterHtml(c) {
 }
 
 // ---------------------------------------------------------------- panels
+function fillerText(dates) {
+  if (!dates?.length) return '';
+  const d = [...dates].sort().map((x) => x.slice(5));
+  const span = d.length > 1 ? `${d[0]} → ${d.at(-1)}` : d[0];
+  return ` · edges from ${d.length > 1 ? `${d.length} other passes` : 'another pass'} (${span})`;
+}
+
 function updateTimeline() {
   const scenes = state.sar?.scenes ?? [];
   const slider = $('date');
@@ -337,7 +346,7 @@ function updateTimeline() {
     <div><b>${fmt(sc.flooded_forest_km2)} km²</b>flooded forest</div>
     <div style="grid-column:span 2"><b>${fmt(sc.pop_near_water)}</b>people living by the water</div>
     ${sc.coverage != null ? `<div style="grid-column:span 2">radar covers <b style="display:inline;font-size:13px">${pct(sc.coverage)}</b> of the area${
-      sc.filler_date && sc.filler_date !== sc.date ? ` · edges from the ${sc.filler_date.slice(5)} pass` : ''}</div>` : ''}`;
+      fillerText(sc.filler_dates)}</div>` : ''}`;
   const v = state.validation?.scenes.find((x) => x.sar_date === sc.date);
   $('validation').innerHTML = !v ? '' : v.ref_reliable === false
     ? `<span class="warn">⚠ Optical view blocked by haze/smoke</span> — the radar sees through it, Sentinel-2 does not.

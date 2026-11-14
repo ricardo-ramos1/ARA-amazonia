@@ -41,6 +41,8 @@ WATER_DB_RANGE = (-16.0, -10.0)  # threshold is clipped to this range
 FLOODED_FOREST_DB = -3.0
 EDGE_PX = 25  # pixels (~100 m each) trimmed from the swath edges of each pass
 URBAN_FRAC = 0.2  # WorldCover built-up fraction above which bright pixels count as urban
+TARGET_COVERAGE = 0.985  # keep reading reserve passes until the mosaic covers this much of the grid
+MAX_FILL_PASSES = 4      # at most this many filler passes per date (source ids 2..5)
 MIN_POWER = 1e-4  # -40 dB: below the L-band noise floor (~-30 dB) -> not a measurement
 STRIP = 2048  # rows per read of the 20 m band (multiple of the 512 chunk and of the 4x block)
 
@@ -161,11 +163,27 @@ def ingest_date(aoi_key: str, date: str, rec: dict) -> dict:
     t0 = dt.datetime.now()
     hh, hv, prim = read_pass(rec["primary"], sess, bbox, web_tr, shape)
     src = np.where(np.isfinite(hh), 1, 0).astype("uint8")
-    fill_used = []
-    if rec.get("secondary"):
-        hh2, hv2, fill_used = read_pass(rec["secondary"], sess, bbox, web_tr, shape)
+    fill_used, fillers = [], []
+    # fillers in plan order: each only fills what is still empty; its source id is 2, 3, …
+    plan_fillers = rec.get("fillers") or ([{"path": rec.get("secondary_path"), "date": rec.get("secondary_date"),
+                                            "granules": rec["secondary"]}] if rec.get("secondary") else [])
+    # then reserve passes, only while the REAL coverage is short (footprints overstate it)
+    reserve = rec.get("reserve", [])
+    queue = [(f, True) for f in plan_fillers] + [(f, False) for f in reserve]
+    tried = [g["file"] for g in rec["primary"]]
+    for f, planned in queue:
+        if not planned and (float((src > 0).mean()) >= TARGET_COVERAGE or len(fillers) >= MAX_FILL_PASSES):
+            break
+        hh2, hv2, used = read_pass(f["granules"], sess, bbox, web_tr, shape)
+        tried += [g["file"] for g in f["granules"]]
         fill = ~np.isfinite(hh) & np.isfinite(hh2)
-        hh[fill], hv[fill], src[fill] = hh2[fill], hv2[fill], 2
+        if fill.mean() < 0.001:  # adds nothing visible: not part of the mosaic
+            continue
+        k = 2 + len(fillers)
+        hh[fill], hv[fill], src[fill] = hh2[fill], hv2[fill], k
+        fill_used += used
+        fillers.append({"source": k, "path": f["path"], "date": f["date"], "coverage": round(float(fill.mean()), 3),
+                        "reserve": not planned})
     out_dir = DATASET / aoi_key
     out_dir.mkdir(parents=True, exist_ok=True)
     tif = out_dir / f"{date}_100m.tif"
@@ -174,14 +192,14 @@ def ingest_date(aoi_key: str, date: str, rec: dict) -> dict:
                 transform=web_tr, nodata=-32768, compress="deflate", predictor=2, tiled=True, zlevel=9)
     with rasterio.open(tif, "w", **prof) as dst:
         dst.write(np.stack([q(hh), q(hv), src.astype("int16")]))
-        for i, d in enumerate(("HH gamma0 dB x10", "HV gamma0 dB x10", "source 1=main 2=filler"), 1):
+        for i, d in enumerate(("HH gamma0 dB x10", "HV gamma0 dB x10", "source 1=main 2+=filler passes"), 1):
             dst.set_band_description(i, d)
         dst.update_tags(date=date, product="NISAR L2 GCOV", scale=str(DB_SCALE))
     mb = sum(g["mb_read"] for g in prim + fill_used)
     print(f"  {aoi_key} {date}: {len(prim)}+{len(fill_used)} frames, {mb:.0f} MB read, "
           f"coverage {float((src > 0).mean()):.0%}, {(dt.datetime.now() - t0).seconds}s", flush=True)
-    return {"granules": prim, "filler": fill_used, "filler_date": rec.get("secondary_date"),
-            "filler_path": rec.get("secondary_path"), "coverage": round(float((src > 0).mean()), 3),
+    return {"granules": prim, "filler": fill_used, "fillers": fillers, "tried": sorted(set(tried)),
+            "filler_dates": [f["date"] for f in fillers if f["coverage"] > 0], "coverage": round(float((src > 0).mean()), 3),
             "coverage_main": round(float((src == 1).mean()), 3), "mb_read": round(mb, 1), "tif": tif.name,
             "tif_sha256": sha256(tif), "ingested": dt.datetime.now().isoformat(timespec="seconds")}
 
@@ -266,11 +284,12 @@ def classify(aoi_key: str, aoi: dict, man: dict) -> None:
         hh, hv, src = read_scene(aoi_key, date)
         cls = np.zeros(shape, "uint8")
         thr = {}
-        for sid in (1, 2):  # each pass has its own geometry / wind: own threshold
+        for sid in sorted(int(v) for v in np.unique(src) if v > 0):  # each pass: own geometry / wind -> own threshold
             m = src == sid
-            if m.sum() < 10000:
-                continue
-            thr[sid] = water_threshold(hh[m], thr.get(1) if sid == 2 else None)
+            if m.sum() < 2000:  # too few pixels for a histogram: use the main pass's threshold
+                thr[sid] = thr.get(1, -13.0)
+            else:
+                thr[sid] = water_threshold(hh[m], thr.get(1) if sid > 1 else None)
             cls[m & (hh < thr[sid])] = 1
         cls[hh > FLOODED_FOREST_DB] = 2
         if built is not None:
@@ -289,7 +308,9 @@ def classify(aoi_key: str, aoi: dict, man: dict) -> None:
                  if frac["water"][r, c] > 0.005 or frac["flooded"][r, c] > 0.005]
         sc = {
             "date": date, "png": f"data/sar/{png.name}", "water_db": round(thr.get(1, np.nan), 1),
-            "coverage": rec.get("coverage"), "filler_date": rec.get("filler_date"),
+            "coverage": rec.get("coverage"),
+            "filler_dates": rec.get("filler_dates") or ([rec["filler_date"]] if rec.get("filler_date") else []),
+            "water_db_by_source": {str(k): round(v, 1) for k, v in thr.items()},
             "water_km2": round(float((cls == 1).sum() * km2), 1),
             "flooded_forest_km2": round(float((cls == 2).sum() * km2), 1),
             "urban_bright_km2": round(float((cls == 3).sum() * km2), 1),
@@ -299,8 +320,6 @@ def classify(aoi_key: str, aoi: dict, man: dict) -> None:
             "pop_near_water": round(float(np.nansum(pop * (frac["water"] > 0.05)))),
             "cells": cells,
         }
-        if 2 in thr:
-            sc["water_db_filler"] = round(thr[2], 1)
         opt = WEB_DATA / "optical" / f"{aoi_key}_{date}.webp"  # keep the link made by validate_optical.py
         if opt.exists():
             sc["optical_png"] = f"data/optical/{opt.name}"
@@ -328,9 +347,21 @@ def main():
     plan_path = DATASET / a.aoi / "plan.json"
     if plan_path.exists():
         plan = json.loads(plan_path.read_text(encoding="utf-8"))["dates"]
+        files = lambda passes: {g["file"] for f in passes for g in f["granules"]}  # noqa: E731
+        core = lambda r: ({g["file"] for g in r["primary"] + r.get("secondary", [])}  # noqa: E731
+                          | files(r.get("fillers", [])))
+        tried = lambda m: set(m.get("tried") or [g["file"] for g in m.get("granules", []) + m.get("filler", [])])  # noqa: E731
+
+        def stale(d, r):
+            """Re-ingest when a planned pass was never tried, or coverage is short and an untried reserve remains."""
+            m = man["scenes"][d]
+            short = (m.get("coverage") or 0) < TARGET_COVERAGE and len(m.get("fillers", [])) < MAX_FILL_PASSES
+            return not core(r) <= tried(m) or (short and not files(r.get("reserve", [])) <= tried(m))
+
         todo = {d: r for d, r in plan.items()
                 if (a.dates and d in a.dates) or (not a.dates and (
-                    a.reingest or d not in man["scenes"] or not (DATASET / a.aoi / f"{d}_100m.tif").exists()))}
+                    a.reingest or d not in man["scenes"] or not (DATASET / a.aoi / f"{d}_100m.tif").exists()
+                    or stale(d, r)))}
         if todo:
             print(f"remote ingest of {len(todo)} dates ({a.workers} in parallel)…")
             with ProcessPoolExecutor(a.workers) as ex:

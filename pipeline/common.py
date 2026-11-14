@@ -62,7 +62,7 @@ DB_SCALE = 10  # dataset stores dB × 10 as int16 (0.1 dB steps — finer is spe
 def read_scene(aoi_key: str, date: str):
     """One scene of the local NISAR dataset on the wide radar grid: (hh_db, hv_db, source).
 
-    source: 0 = no data, 1 = main track (that date), 2 = filler track (another date ≤ 12 days away).
+    source: 0 = no data, 1 = main track (that date), 2, 3 = filler passes (other tracks ≤ 12 days away).
     """
     import numpy as np
     import rasterio

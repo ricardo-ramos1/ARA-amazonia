@@ -22,7 +22,7 @@ Machine-learning models forecast river level, rainfall and fire activity 1, 3 an
 | | |
 |---|---|
 | 🛰️ **19 NISAR dates** (Jun–Nov 2026) | Manaus and Tefé, each over ~90,000 km², read remotely without downloading full files |
-| ✓ **Radar water validated** against Sentinel-2 | F1 **0.89** (Manaus) and **0.81** (Tefé) across the whole area |
+| ✓ **Radar water validated** against Sentinel-2 | F1 **0.89** (Manaus) and **0.84** (Tefé) across the whole area |
 | 🌊 **Flooded forest −98%** | Manaus region, Jun → Nov 2026: the floodplain drained as El Niño set in |
 | 🔥 **222 burn scars** detected by radar | **92%** have a FIRMS fire nearby, vs. 12% for random forest points |
 | 📈 **River forecast** 3 months ahead | skill **+0.25** over climatology; beats persistence |
@@ -95,7 +95,7 @@ Generate a token at https://urs.earthdata.nasa.gov (*Generate Token*) and store 
 .venv/Scripts/python pipeline/detect_burn_scars.py --aoi manaus
 ```
 
-**Area and dates.** The radar covers the same area as the fire and energy views (study area ± 1°) on **every pass of the main track**: 10 dates for Manaus and 9 for Tefé, June to November 2026. A single pass covers 55–80% of that area. `--plan` fills the edges with a pass from **another track no more than 12 days away**, which raises coverage to 90–97%. Only HH acquisitions in the standard 20/40 MHz science modes are used: VV-only passes are skipped, and so are narrow 5 MHz modes, whose noise-floor stripes between sub-swaths would read as fake rivers. Pixels no pass covered are drawn hatched ("No radar coverage"). Each track gets its own water threshold, and band 3 of each GeoTIFF records which pass every pixel came from.
+**Area and dates.** The radar covers the same area as the fire and energy views (study area ± 1°) on **every pass of the main track**: 10 dates for Manaus and 9 for Tefé, June to November 2026. A single pass covers 55–80% of that area. `--plan` fills the edges with passes from **other tracks no more than 12 days away** (up to 2 planned, plus reserve passes that `process_gcov.py` reads only while the *measured* coverage is below 98.5%, since footprint polygons overstate real coverage). Coverage reaches 95–97% for every Manaus date and 97% for Tefé from August on. Only HH acquisitions in the standard 20/40 MHz science modes are used: VV-only passes are skipped, and so are narrow 5 MHz modes, whose noise-floor stripes between sub-swaths would read as fake rivers. Pixels no pass covered are drawn hatched ("No radar coverage"). Each track gets its own water threshold, and band 3 of each GeoTIFF records which pass every pixel came from.
 
 **Remote partial reads instead of downloads.** Each GCOV file is 2–13 GB. `process_gcov.py` opens the HDF5 over the network (`pipeline/remote_h5.py`, parallel HTTP *Range* requests) and reads only the HH and HV blocks inside the area. It uses **frequencyB (80 m)**, about 1/20 of the bytes of the 20 m band. We aggregate to 100 m anyway: in a Tefé test, water classified from frequencyB agreed with frequencyA at **F1 0.97**. When a scene has no frequencyB, the script reads A and averages 4×4. Result: **150–220 MB and about 2 minutes per date**, instead of a 5–13 GB download, and nothing raw stays on disk.
 
@@ -179,8 +179,8 @@ The live data is a snapshot of the last pipeline run. "Fire now" in particular o
 ## Results: rivers
 
 - **Radar (19 dates, study area ± 1°):** from June to November 2026, in the Manaus region, open water fell 27% (7,259 → 5,327 km²) and flooded forest fell 98% (6,041 → 113 km²). In Tefé, from August to October (same coverage), flooded forest fell 98% (3,828 → 77 km²).
-- **Sentinel-2 validation (whole area):** F1 0.89 in Manaus (8 of 10 dates reliable) and 0.81 in Tefé (8 of 9). Within the original study area, F1 0.91 and 0.94. A date only counts if the optical image sees at least 70% of the permanent river (WorldCover) as water. Haze or smoke covered Manaus on Oct 21 and Nov 2, and Tefé on Oct 23.
-- **Tefé caveat (Jun–Jul):** on those dates, frame 175 of the main track only came as frequencyA in `DHNA` mode, and its content is fill (~−54 dB). Those pixels are discarded (below −40 dB), so coverage drops to 56–66%.
+- **Sentinel-2 validation (whole area):** F1 0.89 in Manaus (8 of 10 dates reliable) and 0.84 in Tefé (8 of 9). Within the original study area, F1 0.91 and 0.94. A date only counts if the optical image sees at least 70% of the permanent river (WorldCover) as water. Haze or smoke covered Manaus on Oct 21 and Nov 2, and Tefé on Oct 23.
+- **Tefé caveat (Jun–Jul):** on those dates, frame 175 of the main track only came as frequencyA in `DHNA` mode, and its content is fill (~−54 dB). Those pixels are discarded (below −40 dB), so coverage drops to 60–72% even with four filler passes.
 - **River model:** 3 months ahead, skill +0.25 over climatology, also beating persistence. Forecast for Nov 2026: 17.2 m (normal: 18.7 m).
 
 ## Results: wildfire

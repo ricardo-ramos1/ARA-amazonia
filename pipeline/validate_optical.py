@@ -126,11 +126,12 @@ def scores(sar, opt):
 
 
 def sar_water(aoi_key, sc):
-    """Radar water mask with each pass's own threshold (main track / filler track)."""
+    """Radar water mask with each pass's own threshold (main track, then filler passes)."""
     hh, _, src = read_scene(aoi_key, sc["date"])
-    water = (src == 1) & (hh < sc["water_db"])
-    if sc.get("water_db_filler") is not None:
-        water |= (src == 2) & (hh < sc["water_db_filler"])
+    thr = {int(k): v for k, v in (sc.get("water_db_by_source") or {"1": sc["water_db"]}).items()}
+    water = np.zeros(hh.shape, bool)
+    for sid, t in thr.items():
+        water |= (src == sid) & (hh < t)
     return water, np.isfinite(hh)
 
 

@@ -95,6 +95,8 @@ def validate(aoi_key: str, aoi: dict, gcov) -> None:
 
 
 MAX_GAP_DAYS = 12  # a filler track may be at most this far in time from the main pass
+MAX_FILLERS = 2    # filler passes (other tracks) used to complete the edges of each date
+MAX_RESERVE = 4    # extra candidate passes, read only if the real coverage is still short
 
 
 def _pick_frames(rs) -> list:
@@ -117,8 +119,8 @@ def _granule(r) -> dict:
 
 
 def wide_plan(key: str, aoi: dict) -> dict:
-    """Every date of the AOI's main track over the wide (±1°) radar grid, each completed by the
-    other track that adds most coverage within MAX_GAP_DAYS. Nothing is downloaded."""
+    """Every date of the AOI's main track over the wide (±1°) radar grid, each completed by up to
+    MAX_FILLERS other tracks within MAX_GAP_DAYS. Nothing is downloaded."""
     import datetime as dt
 
     from shapely.geometry import box, shape
@@ -147,25 +149,44 @@ def wide_plan(key: str, aoi: dict) -> dict:
             continue
         prim = _pick_frames(rs)
         u = cover(prim)
-        best = None
+        rec = {"primary": [_granule(r) for r in prim], "coverage_primary": round(u.area / wide.area, 3), "fillers": []}
+        used = {main}
+        # Greedy: up to MAX_FILLERS other tracks, each the one adding most coverage (ties -> closer in time).
+        # Footprint polygons overstate real coverage (swath edges are trimmed), so even small gains are taken:
+        # a single filler often leaves thin strips that look like stacked images.
+        for _ in range(MAX_FILLERS):
+            best = None
+            for (p2, d2), rs2 in groups.items():
+                gap = abs((day(d2) - day(date)).days)
+                if p2 in used or gap > MAX_GAP_DAYS:
+                    continue
+                uu = u.union(cover(rs2)).intersection(wide)
+                score = (round(uu.area / wide.area, 3), -gap)
+                if best is None or score > best[0]:
+                    best = (score, p2, d2, rs2, uu)
+            if not best or best[0][0] <= u.area / wide.area + 0.002:
+                break
+            rec["fillers"].append({"path": best[1], "date": best[2], "granules": [_granule(r) for r in _pick_frames(best[3])]})
+            used.add(best[1])
+            u = best[4]
+        rec["coverage"] = round(u.area / wide.area, 3)
+        # Reserve passes: the footprint polygons promise more than the data delivers (e.g. a ~14 km gap between two
+        # frames of one pass), so process_gcov reads these in order while the REAL coverage is still short.
+        # One pass per track (the closest in time); ranked by the area they cover, then by time gap.
+        reserve = {}
         for (p2, d2), rs2 in groups.items():
             gap = abs((day(d2) - day(date)).days)
-            if p2 == main or gap > MAX_GAP_DAYS:
+            if p2 in used or gap > MAX_GAP_DAYS:
                 continue
-            uu = u.union(cover(rs2)).intersection(wide)
-            score = (round(uu.area / wide.area, 2), -gap)
-            if best is None or score > best[0]:
-                best = (score, p2, d2, rs2)
-        rec = {"primary": [_granule(r) for r in prim], "coverage_primary": round(u.area / wide.area, 3)}
-        if best and best[0][0] > rec["coverage_primary"] + 0.02:
-            rec.update(secondary=[_granule(r) for r in _pick_frames(best[3])], secondary_path=best[1],
-                       secondary_date=best[2], coverage=best[0][0])
-        else:
-            rec["coverage"] = rec["coverage_primary"]
+            area = cover(rs2).area
+            if p2 not in reserve or gap < reserve[p2][1]:
+                reserve[p2] = (area, gap, d2, rs2)
+        ranked = sorted(reserve.items(), key=lambda kv: (-round(kv[1][0], 2), kv[1][1]))[:MAX_RESERVE]
+        rec["reserve"] = [{"path": p2, "date": d2, "granules": [_granule(r) for r in _pick_frames(rs2)]}
+                          for p2, (_, _, d2, rs2) in ranked]
         plan["dates"][date] = rec
         print(f"  {date}: track {main} frames {[g['frame'] for g in rec['primary']]} {rec['coverage_primary']:.0%}"
-              + (f" + track {rec['secondary_path']} {rec['secondary_date']} -> {rec['coverage']:.0%}"
-                 if "secondary" in rec else ""))
+              + "".join(f" + track {f['path']} {f['date']}" for f in rec["fillers"]) + f" -> {rec['coverage']:.0%}")
     write_json(DATASET / key / "plan.json", plan)
     return plan
 
