@@ -1,4 +1,4 @@
-"""'Fogo agora': active fires of the last 48 h + 72 h weather forecast -> fire danger, spread/smoke direction
+"""'Fire now': active fires of the last 48 h + 72 h weather forecast -> fire danger, spread/smoke direction
 and people downwind. A situational nowcast for TODAY, not a validated model.
 
 Inputs (all live, re-run to refresh):
@@ -66,7 +66,7 @@ def fetch_fires(bbox, key) -> pd.DataFrame:
         frames.append(pd.DataFrame({"lat": df.latitude, "lon": df.longitude, "frp": df.frp,
                                     "date": df.acq_date, "time": df.acq_time.astype(str).str.zfill(4),
                                     "sensor": src.replace("_NRT", "")}))
-        print(f"  {src}: {len(df)} focos")
+        print(f"  {src}: {len(df)} fires")
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=["lat", "lon", "frp", "date", "time", "sensor"])
 
 
@@ -119,10 +119,10 @@ def angstrom(t, rh):
 
 def danger(a_min, rain24, gust_max) -> str:
     if a_min < 2.0 and rain24 < 2:
-        return "muito alto" if gust_max >= 8 else "alto"
+        return "very high" if gust_max >= 8 else "high"
     if a_min < 2.5 and rain24 < 5:
-        return "moderado"
-    return "baixo"
+        return "moderate"
+    return "low"
 
 
 def in_sector(lon, lat, lon0, lat0, bearing_to, length_km, half_angle):
@@ -152,9 +152,9 @@ def main():
     bbox = [w - BUFFER_DEG, s - BUFFER_DEG, e + BUFFER_DEG, n + BUFFER_DEG]
     key = user_env("FIRMS_MAP_KEY")
     if not key:
-        raise SystemExit("Defina FIRMS_MAP_KEY.")
+        raise SystemExit("Set the FIRMS_MAP_KEY environment variable.")
 
-    print(f"Fogo agora — {a.aoi}")
+    print(f"Fire now — {a.aoi}")
     fires = fetch_fires(bbox, key.strip())
     clusters = cluster(fires, bbox)
     top = clusters[:20]
@@ -191,7 +191,7 @@ def main():
                   "rain24": round(float(h24.precipitation.sum()), 1), "rain72": round(float(h.precipitation.sum()), 1),
                   "vpd_max_kpa": round(float(h24.vapour_pressure_deficit.max()), 2)})
         c["danger"] = danger(c["angstrom_min"], c["rain24"], c["gust_max"])
-        if c["danger"] != "baixo":
+        if c["danger"] != "low":
             if spd < CALM_MS:  # calm / variable wind: no direction -> smoke pools around the fire
                 length, half = CALM_KM, 180
                 c["calm"] = True
@@ -210,7 +210,7 @@ def main():
               "rain": hc.precipitation.round(1).tolist(),
               "angstrom": angstrom(hc.temperature_2m, hc.relative_humidity_2m).round(2).tolist()}
 
-    active = [c for c in top if c.get("danger") not in (None, "baixo")]
+    active = [c for c in top if c.get("danger") not in (None, "low")]
     out = {"aoi": a.aoi, "generated_local": f"{pd.Timestamp.now(tz=TZ):%Y-%m-%d %H:%M}", "tz": TZ,
            "bbox": [round(v, 3) for v in bbox], "steps": [t.strftime("%Y-%m-%dT%H:%M") for t in steps],
            "n_fires": int(len(fires)), "n_clusters": len(clusters),
@@ -222,13 +222,13 @@ def main():
            "smoke_km": SMOKE_KM, "sources": ["NASA FIRMS NRT (VIIRS NOAA-20/21, S-NPP; MODIS)",
                                              "Open-Meteo forecast (ECMWF/GFS)", "WorldPop 2020"]}
     write_json(WEB_DATA / f"nowcast_{a.aoi}.json", out)
-    dist = {d: sum(1 for c in top if c.get("danger") == d) for d in ("muito alto", "alto", "moderado", "baixo")}
-    print(f"  {len(fires)} focos em {len(clusters)} aglomerados | risco nos 20 maiores: {dist} | "
-          f"pessoas a favor do vento (≤{SMOKE_KM} km): {out['people_downwind']:,}")
+    dist = {d: sum(1 for c in top if c.get("danger") == d) for d in ("very high", "high", "moderate", "low")}
+    print(f"  {len(fires)} fires in {len(clusters)} clusters | risk in the 20 largest: {dist} | "
+          f"people downwind (≤{SMOKE_KM} km): {out['people_downwind']:,}")
     for c in top[:5]:
         print(f"   {c['lat']:.3f},{c['lon']:.3f} n={c['n']} FRP={c['frp']} Angström {c['angstrom_min']} "
-              f"UR mín {c['rh_min']}% vento {c['wind_ms']} m/s → {c['wind_to']}° chuva24 {c['rain24']} mm "
-              f"=> {c['danger']} | pessoas a favor do vento {c.get('people_downwind', 0):,}")
+              f"min RH {c['rh_min']}% wind {c['wind_ms']} m/s → {c['wind_to']}° rain24 {c['rain24']} mm "
+              f"=> {c['danger']} | people downwind {c.get('people_downwind', 0):,}")
 
 
 if __name__ == "__main__":

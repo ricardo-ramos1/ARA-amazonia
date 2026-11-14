@@ -16,7 +16,7 @@ SEASON_CENTER = {"DJF": 1, "JFM": 2, "FMA": 3, "MAM": 4, "AMJ": 5, "MJJ": 6,
 
 
 def phase(v: float) -> str:
-    return "El Niño" if v >= 0.5 else "La Niña" if v <= -0.5 else "Neutro"
+    return "El Niño" if v >= 0.5 else "La Niña" if v <= -0.5 else "Neutral"
 
 
 def main() -> pd.DataFrame:
@@ -34,7 +34,7 @@ def main() -> pd.DataFrame:
         "oni": df["oni"].round(2).tolist(),
     })
     last = df.iloc[-1]
-    print(f"  último valor: {last.SEAS} {last.date:%Y} = {last.oni:+.2f} °C ({last.phase})")
+    print(f"  latest value: {last.SEAS} {last.date:%Y} = {last.oni:+.2f} °C ({last.phase})")
     return df
 
 

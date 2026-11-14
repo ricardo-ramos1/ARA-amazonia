@@ -109,7 +109,7 @@ def mosaic(items, bbox, dst_tr, shape, need):
         rgb[fill] = vis[fill]
         used.append(f'{it["properties"]["datetime"][:10]} {it["properties"].get("s2:mgrs_tile", "")}')
         cov = np.isfinite(ndwi[need]).mean()
-        print(f"    + {used[-1]} (nuvens {it['properties']['eo:cloud_cover']:.0f}%) -> cobertura {cov:.0%}")
+        print(f"    + {used[-1]} (clouds {it['properties']['eo:cloud_cover']:.0f}%) -> coverage {cov:.0%}")
         if cov > 0.97:
             break
     pool.shutdown()
@@ -184,8 +184,8 @@ def validate_date(aoi_key: str, sc: dict, refresh: bool, cached_items):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--aoi", default="manaus")
-    ap.add_argument("--date", help="só uma data NISAR (YYYY-MM-DD)")
-    ap.add_argument("--refresh", action="store_true", help="baixar o mosaico Sentinel-2 de novo")
+    ap.add_argument("--date", help="a single NISAR date (YYYY-MM-DD)")
+    ap.add_argument("--refresh", action="store_true", help="download the Sentinel-2 mosaic again")
     ap.add_argument("--workers", type=int, default=3)
     a = ap.parse_args()
     sar_json = WEB_DATA / f"sar_{a.aoi}.json"
@@ -206,15 +206,15 @@ def main():
             try:
                 m = fut.result()
             except Exception as err:  # noqa: BLE001
-                print(f"  ! {d}: falhou ({err})")
+                print(f"  ! {d}: failed ({err})")
                 continue
             if m is None:
-                print(f"  {d}: sem Sentinel-2 próximo")
+                print(f"  {d}: no Sentinel-2 image nearby")
                 continue
             old[d] = m
-            flag = "" if m["ref_reliable"] in (True, None) else "  ⚠ referência óptica comprometida"
-            print(f"  {d}: F1={m['f1']} (AOI {(m['aoi'] or {}).get('f1', '—')}) IoU={m['iou']} cobertura {m['coverage']:.0%}, "
-                  f"óptico vê {m['ref_perm_water_detected'] or 0:.0%} da água permanente{flag}", flush=True)
+            flag = "" if m["ref_reliable"] in (True, None) else "  ⚠ optical reference unreliable"
+            print(f"  {d}: F1={m['f1']} (AOI {(m['aoi'] or {}).get('f1', '—')}) IoU={m['iou']} coverage {m['coverage']:.0%}, "
+                  f"optical sees {m['ref_perm_water_detected'] or 0:.0%} of permanent water{flag}", flush=True)
     for sc in sar["scenes"]:
         png = WEB_DATA / "optical" / f"{a.aoi}_{sc['date']}.webp"
         if png.exists():
@@ -230,7 +230,7 @@ def main():
     write_json(val_path, {"index": "MNDWI", "threshold": NDWI_T, "max_days": MAX_DAYS,
                           "ref_min_perm_water": REF_MIN_PERM_WATER, "summary": summary, "scenes": scenes})
     write_json(sar_json, sar)
-    print(f"  resumo (referências confiáveis {summary['n_reliable']}/{summary['n_total']}): "
+    print(f"  summary (reliable references {summary['n_reliable']}/{summary['n_total']}): "
           + ", ".join(f"{k}={v}" for k, v in summary.items() if not k.startswith("n_")))
 
 

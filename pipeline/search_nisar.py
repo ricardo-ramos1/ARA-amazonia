@@ -68,9 +68,9 @@ def manifest(aoi_key: str) -> dict:
 def validate(aoi_key: str, aoi: dict, gcov) -> None:
     """Compare the local dataset with the catalogue — no download."""
     man = manifest(aoi_key)["scenes"]
-    print(f"  validação do dataset local ({len(man)} cenas em {DATASET / aoi_key}):")
+    print(f"  local dataset check ({len(man)} dates in {DATASET / aoi_key}):")
     if not man:
-        print("    (vazio) — rode --plan e process_gcov.py")
+        print("    (empty) — run --plan and process_gcov.py")
     for date, rec in sorted(man.items()):
         grs = rec.get("granules", []) + rec.get("filler", [])
         names = [g["file"].removesuffix(".h5") for g in grs]
@@ -79,19 +79,19 @@ def validate(aoi_key: str, aoi: dict, gcov) -> None:
         changed = [g for g in grs if g["file"] in now and g.get("md5") and now[g["file"]]["md5"]
                    and g["md5"] != now[g["file"]]["md5"]]
         if gone:
-            print(f"    ✗ {date}: {len(gone)} de {len(grs)} granules não estão mais publicados no ASF")
+            print(f"    ✗ {date}: {len(gone)} of {len(grs)} granules are no longer published on ASF")
         elif changed:
-            print(f"    ⚠ {date}: {len(changed)} granule(s) reprocessado(s) (MD5 mudou) — "
-                  "rode --plan e process_gcov.py --reingest")
+            print(f"    ⚠ {date}: {len(changed)} granule(s) reprocessed (MD5 changed) — "
+                  "run --plan and process_gcov.py --reingest")
         else:
-            print(f"    ✓ {date}: {len(grs)} granules iguais ao catálogo (MD5)"
-                  + (f", preenchimento de {rec['filler_date']}" if rec.get("filler_date") else ""))
+            print(f"    ✓ {date}: {len(grs)} granules match the catalog (MD5)"
+                  + (f", filler from {rec['filler_date']}" if rec.get("filler_date") else ""))
     main = aoi["nisar_track"]["path"]
     last = max(man) if man else ""
     newer = sorted({r.properties["startTime"][:10] for r in gcov if r.properties["pathNumber"] == main
                     and r.properties["startTime"][:10] > last})
-    print(f"  novas passagens da trilha {main} desde {last or '—'}: " + (", ".join(newer) or "nenhuma")
-          + (" — rode --plan e process_gcov.py" if newer else ""))
+    print(f"  new passes on track {main} since {last or '—'}: " + (", ".join(newer) or "none")
+          + (" — run --plan and process_gcov.py" if newer else ""))
 
 
 MAX_GAP_DAYS = 12  # a filler track may be at most this far in time from the main pass
@@ -159,8 +159,8 @@ def wide_plan(key: str, aoi: dict) -> dict:
         else:
             rec["coverage"] = rec["coverage_primary"]
         plan["dates"][date] = rec
-        print(f"  {date}: trilha {main} frames {[g['frame'] for g in rec['primary']]} {rec['coverage_primary']:.0%}"
-              + (f" + trilha {rec['secondary_path']} {rec['secondary_date']} -> {rec['coverage']:.0%}"
+        print(f"  {date}: track {main} frames {[g['frame'] for g in rec['primary']]} {rec['coverage_primary']:.0%}"
+              + (f" + track {rec['secondary_path']} {rec['secondary_date']} -> {rec['coverage']:.0%}"
                  if "secondary" in rec else ""))
     write_json(DATASET / key / "plan.json", plan)
     return plan
@@ -186,7 +186,7 @@ def session() -> asf.ASFSession:
         return s
     if os.getenv("EARTHDATA_USERNAME"):
         return s.auth_with_creds(os.environ["EARTHDATA_USERNAME"], os.environ["EARTHDATA_PASSWORD"])
-    raise SystemExit("Defina EARTHDATA_TOKEN (ou EARTHDATA_USERNAME/EARTHDATA_PASSWORD) para baixar.")
+    raise SystemExit("Set EARTHDATA_TOKEN (or EARTHDATA_USERNAME/EARTHDATA_PASSWORD) to read NISAR data.")
 
 
 def pick(items: list, n: int) -> list:
@@ -198,12 +198,12 @@ def pick(items: list, n: int) -> list:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--aoi", help="uma AOI (padrão: todas)")
+    ap.add_argument("--aoi", help="one AOI (default: all)")
     ap.add_argument("--download", action="store_true")
-    ap.add_argument("--n", type=int, default=3, help="nº de datas GCOV a baixar")
-    ap.add_argument("--validate", action="store_true", help="só conferir o dataset local com o catálogo (sem baixar)")
+    ap.add_argument("--n", type=int, default=3, help="number of GCOV dates to download (legacy full-file mode)")
+    ap.add_argument("--validate", action="store_true", help="only check the local dataset against the catalog (no download)")
     ap.add_argument("--plan", action="store_true",
-                    help="planejar o mosaico amplo (todas as datas da trilha principal + trilha de preenchimento)")
+                    help="plan the wide mosaic (every date of the main track + a filler track)")
     a = ap.parse_args()
 
     aois = load_aois()
@@ -237,13 +237,14 @@ def main():
             chosen = pick(same_track, a.n)
             out = DATA_RAW / "nisar" / key
             out.mkdir(parents=True, exist_ok=True)
-            in_dataset = {rec["granule"] for rec in manifest(key)["scenes"].values()}
+            in_dataset = {g["file"] for rec in manifest(key)["scenes"].values()
+                          for g in rec.get("granules", []) + rec.get("filler", [])}
             todo = [r for r in chosen if not (out / r.properties["fileName"]).exists()
                     and r.properties["fileName"] not in in_dataset]  # already processed: no need to re-download
             if len(todo) < len(chosen):
-                print(f"  {len(chosen) - len(todo)} cena(s) já no dataset local ou baixadas — puladas")
+                print(f"  {len(chosen) - len(todo)} scene(s) already in the local dataset or downloaded — skipped")
             gb = sum(h5_size(r) for r in todo) / 1e9
-            print(f"  baixando {len(todo)} GCOV (trilha {t['path']}/{t['frame']}, ~{gb:.1f} GB) para {out}")
+            print(f"  downloading {len(todo)} GCOV (track {t['path']}/{t['frame']}, ~{gb:.1f} GB) to {out}")
             if todo:
                 asf.ASFSearchResults(todo).download(path=str(out), session=session(), processes=2)
 

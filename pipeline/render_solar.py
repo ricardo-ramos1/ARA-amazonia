@@ -61,7 +61,7 @@ def main():
             "bounds": [round(v, 3) for v in (w, s, e, n)], "png": f"data/{png.name}",
             "min": round(float(z.min()), 3), "max": round(float(z.max()), 3), "step": STEP,
             "colors": RAMP, "grid": [[round(float(v), 3) for v in row] for row in sub],
-            "source": "NASA POWER climatologia (grade 1°), interpolação cúbica apenas visual"})
+            "source": "NASA POWER climatology (1° grid); cubic interpolation is visual only"})
         print(f"  {key}: {z.min():.2f}–{z.max():.2f} kWh/m²/dia, {len(levels) - 1} faixas, {len(near)} pontos POWER")
 
 

@@ -49,7 +49,7 @@ def from_service(station: str, y0: int, y1: int) -> pd.DataFrame:
         if rows:
             frames.append(pd.DataFrame(rows))
     if not frames:
-        raise RuntimeError("ANA não retornou dados (serviço fora do ar?). Use o fallback --csv.")
+        raise RuntimeError("ANA returned no data (service down?). Use the --csv fallback.")
     return wide_to_daily(pd.concat(frames), "DataHora", "NivelConsistencia")
 
 
@@ -73,7 +73,7 @@ def read_cotas_text(path: str) -> str:
     if str(path).lower().endswith(".zip"):
         text = from_zip(zipfile.ZipFile(path))
         if text is None:
-            raise SystemExit(f"Nenhum arquivo de cotas dentro de {path}")
+            raise SystemExit(f"No river-stage file inside {path}")
         return text
     with open(path, encoding="latin-1") as f:
         return f.read()
@@ -115,7 +115,7 @@ def from_telemetry(station: str, start: dt.date) -> pd.DataFrame:
     from concurrent.futures import ThreadPoolExecutor
 
     months = pd.date_range(start, dt.date.today(), freq="MS").date
-    print(f"  telemetria {station}: {len(months)} meses a partir de {start:%Y-%m}…")
+    print(f"  telemetry {station}: {len(months)} months from {start:%Y-%m}…")
     with ThreadPoolExecutor(4) as ex:
         parts = list(ex.map(lambda m: telemetry_month(station, m), months))
     return pd.concat(parts, ignore_index=True).sort_values("date")
@@ -130,7 +130,7 @@ def clean(daily: pd.DataFrame) -> pd.DataFrame:
     jump = daily.sort_values("date")["cota_cm"].diff().abs()
     ok &= ~((jump > 150) & (jump.shift(-1) > 150))
     if (~ok).sum():
-        print(f"  removidos {(~ok).sum()} valores espúrios")
+        print(f"  removed {(~ok).sum()} spurious values")
     return daily[ok]
 
 
@@ -144,10 +144,10 @@ def monthly(daily: pd.DataFrame) -> pd.DataFrame:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--aoi", default="manaus")
-    ap.add_argument("--csv", help="CSV baixado manualmente do HidroWeb")
+    ap.add_argument("--csv", help="CSV/zip downloaded manually from HidroWeb")
     ap.add_argument("--start", type=int, default=1990)
     ap.add_argument("--end", type=int, default=dt.date.today().year)
-    ap.add_argument("--no-telemetry", action="store_true", help="não completar com dados telemétricos recentes")
+    ap.add_argument("--no-telemetry", action="store_true", help="do not fill recent years with telemetry data")
     a = ap.parse_args()
     aoi = load_aois()[a.aoi]
     daily = from_csv(a.csv) if a.csv else from_service(aoi["ana_station"], a.start, a.end)
@@ -162,7 +162,7 @@ def main():
     m.to_csv(DATA_PROCESSED / f"river_{a.aoi}.csv", index=False)
     write_json(WEB_DATA / f"river_{a.aoi}.json", {"dates": m.date.dt.strftime("%Y-%m").tolist(),
                                                   "level": m.level_m.round(2).tolist()})
-    print(f"  {len(m)} meses, {m.date.min():%Y-%m} → {m.date.max():%Y-%m}")
+    print(f"  {len(m)} months, {m.date.min():%Y-%m} → {m.date.max():%Y-%m}")
 
 
 if __name__ == "__main__":

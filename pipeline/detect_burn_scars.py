@@ -50,7 +50,7 @@ def main():
     lc = np.load(DATA_PROCESSED / f"landcover_{a.aoi}.npz")
     tree, water = np.nan_to_num(lc["tree"]), np.nan_to_num(lc["water"])
     if tree.shape != hh0.shape:
-        raise SystemExit("landcover em outra grade: rode pipeline/fetch_landcover.py")
+        raise SystemExit("land cover is on another grid: run pipeline/fetch_landcover.py")
 
     dhv = multilook(hv1) - multilook(hv0)
     forest = ((tree > 0.8) & (water < 0.05) & np.isfinite(dhv) & (hh0 > -10) & (hh1 > -10)
@@ -81,9 +81,9 @@ def main():
             n_fire = int((dkm <= CONFIRM_KM + np.sqrt(m.sum()) * 0.1).sum())
         patches.append({"lon": round(lon, 4), "lat": round(lat, 4), "km2": round(m.sum() * (WEB_RES_DEG * 111.32) ** 2, 2),
                         "dhv_db": round(float(np.nanmean(dhv[sl][m]) - med), 1), "fires": n_fire,
-                        "label": ("queimada (confirmada FIRMS)" if n_fire else
-                                  "distúrbio sem foco (desmatamento? fogo de sub-bosque?)" if has_fires_for_period
-                                  else "distúrbio (sem dados FIRMS do período)")})
+                        "label": ("burn scar (FIRMS-confirmed)" if n_fire else
+                                  "disturbance without fire (deforestation? understory fire?)" if has_fires_for_period
+                                  else "disturbance (no FIRMS data for the period)")})
     patches.sort(key=lambda p: -p["km2"])
 
     # overlay: red = strong HV drop in forest, transparent elsewhere
@@ -117,10 +117,10 @@ def main():
            "control_rate_random_forest": control,
            "patches": patches}
     write_json(WEB_DATA / f"scars_{a.aoi}.json", out)
-    print(f"{a.aoi} {d0}→{d1}: ΔHV floresta mediana {med:+.2f} dB (MAD {mad:.2f}); "
-          f"{len(patches)} manchas, {out['km2']} km²; focos FIRMS no período: {len(fires)}; "
-          f"confirmadas por fogo: {len(conf)} ({out['km2_fire_confirmed']} km²)"
-          + (f" | controle aleatório: {control:.0%}" if control is not None else ""))
+    print(f"{a.aoi} {d0}→{d1}: forest ΔHV median {med:+.2f} dB (MAD {mad:.2f}); "
+          f"{len(patches)} patches, {out['km2']} km²; FIRMS fires in period: {len(fires)}; "
+          f"fire-confirmed: {len(conf)} ({out['km2_fire_confirmed']} km²)"
+          + (f" | random control: {control:.0%}" if control is not None else ""))
 
 
 if __name__ == "__main__":

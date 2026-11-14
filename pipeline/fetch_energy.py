@@ -28,16 +28,16 @@ FIRST_YEAR = 2013
 PLANTS = {  # id_reservatorio (hydro data) -> metadata; coordinates of the powerhouse (approximate)
     # ceg = ANEEL plant code: stable across ONS files (plant NAMES changed format in 2026-05, e.g. "Jirau" -> "UHE JIRAU")
     "AMUHBB": {"name": "Balbina", "river": "Uatumã", "ceg": "UHE.PH.AM.000190-2", "cap": "BALBINA", "lat": -1.917, "lon": -59.473,
-               "note": "abastece Manaus; reservatório de acumulação"},
+               "note": "supplies Manaus; storage reservoir"},
     "AMUSSN": {"name": "Santo Antônio", "river": "Madeira", "ceg": "UHE.PH.RO.029707-0", "cap": "SANTO ANTÔNIO", "lat": -8.802, "lon": -63.950,
-               "note": "fio d'água: gera com a água que passa"},
+               "note": "run-of-river: generates with the water flowing past"},
     "AMUHJI": {"name": "Jirau", "river": "Madeira", "ceg": "UHE.PH.RO.029736-4", "cap": "JIRAU", "lat": -9.264, "lon": -64.644,
-               "note": "fio d'água: gera com a água que passa"},
+               "note": "run-of-river: generates with the water flowing past"},
     # Belo Monte's own "reservoir" in ONS is the intermediate canal (inflow ~0); the Xingu flow enters at Pimental
     "AMUSBM": {"name": "Belo Monte", "river": "Xingu", "ceg": "UHE.PH.PA.030354-2", "cap": ("BELO MONTE", "PIMENTAL"), "lat": -3.126, "lon": -51.775,
-               "inflow_from": "AMUSPM", "note": "maior usina 100% brasileira; fio d'água (vazão medida em Pimental)"},
+               "inflow_from": "AMUSPM", "note": "largest fully Brazilian power plant; run-of-river (inflow measured at Pimental)"},
     "AMSU": {"name": "Samuel", "river": "Jamari", "ceg": "UHE.PH.RO.002687-5", "cap": "SAMUEL", "lat": -8.750, "lon": -63.457,
-             "note": "reservatório de acumulação"},
+             "note": "storage reservoir"},
 }
 EXTRA_RES = {p["inflow_from"] for p in PLANTS.values() if p.get("inflow_from")}
 POWER_M = "https://power.larc.nasa.gov/api/temporal/monthly/point"
@@ -95,14 +95,14 @@ def generation_monthly() -> pd.DataFrame:
         g["id_reservatorio"] = g.ceg.astype(str).str[:18].map(by_ceg)  # "UHE.PH.AM.000190-2.01" -> plant
         g = g.dropna(subset=["id_reservatorio"])
         if g.empty:
-            print(f"   ! {remote}: nenhuma usina encontrada")
+            print(f"   ! {remote}: no plant found")
             continue
         g["val_geracao"] = pd.to_numeric(g.val_geracao, errors="coerce")
         g["date"] = pd.to_datetime(g.din_instante).dt.to_period("M").dt.to_timestamp()
-        # hourly MW summed over a plant's units, then averaged over the month = MW médio
+        # hourly MW summed over a plant's units, then averaged over the month = average MW
         hourly = g.groupby(["id_reservatorio", "din_instante", "date"]).val_geracao.sum().reset_index()
         frames.append(hourly.groupby(["id_reservatorio", "date"]).val_geracao.mean().reset_index())
-        print(f"  ONS geração {remote[16:-8]}")
+        print(f"  ONS generation {remote[16:-8]}")
     g = pd.concat(frames)
     return g.groupby(["id_reservatorio", "date"]).val_geracao.mean().rename("gen_mw").reset_index()
 
@@ -144,20 +144,20 @@ def solar_grid():
             r = requests.get(POWER_CLIM, params={"parameters": "ALLSKY_SFC_SW_DWN", "community": "RE", "format": "JSON", **box},
                              timeout=300)
             if r.status_code != 200:
-                print(f"  ! grade solar POWER {box}: HTTP {r.status_code} {r.text[:120]}")
+                print(f"  ! POWER solar grid {box}: HTTP {r.status_code} {r.text[:120]}")
                 continue
             for f in r.json().get("features", []):
                 lon, lat = f["geometry"]["coordinates"][:2]
                 v = f["properties"]["parameter"]["ALLSKY_SFC_SW_DWN"].get("ANN")
                 if v is not None and v > 0:
                     cells[(round(lon, 2), round(lat, 2))] = round(v, 2)
-    write_json(WEB_DATA / "solar_grid.json", {"param": "GHI média anual (kWh/m²/dia)", "cell_deg": 1.0,
+    write_json(WEB_DATA / "solar_grid.json", {"param": "annual mean GHI (kWh/m²/day)", "cell_deg": 1.0,
                                               "cells": [[x, y, v] for (x, y), v in sorted(cells.items())]})
-    print(f"  grade solar: {len(cells)} células")
+    print(f"  solar grid: {len(cells)} cells")
 
 
 def main():
-    print("Hidrelétricas (ONS)…")
+    print("Hydropower (ONS)…")
     h = hydro_daily()
     g = generation_monthly()
     m = h.merge(g, on=["id_reservatorio", "date"], how="outer")
@@ -165,14 +165,14 @@ def main():
     m["cf"] = m.gen_mw / m.cap_mw.replace(0, np.nan)
     m["plant"] = m.id_reservatorio.map(lambda k: PLANTS[k]["name"])
     m.sort_values(["plant", "date"]).to_csv(DATA_PROCESSED / "hydro_monthly.csv", index=False)
-    print(m.groupby("plant").agg(meses=("date", "count"), ultimo=("date", "max"), cap=("cap_mw", "last")).to_string())
+    print(m.groupby("plant").agg(months=("date", "count"), last=("date", "max"), cap=("cap_mw", "last")).to_string())
     write_json(DATA_PROCESSED / "hydro_plants.json", PLANTS)
 
     print("Solar (NASA POWER)…")
     for key, aoi in load_aois().items():
         df = solar_point(*aoi["center"])
         df.to_csv(DATA_PROCESSED / f"solar_{key}.csv", index=False)
-        print(f"  {key}: {len(df)} meses, até {df.date.max():%Y-%m}")
+        print(f"  {key}: {len(df)} months, up to {df.date.max():%Y-%m}")
     solar_grid()
 
 

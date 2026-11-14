@@ -1,18 +1,1 @@
-{
-  "manaus": {
-    "name": "Manaus — Encontro das Águas (Rio Negro / Solimões)",
-    "bbox": [-60.6, -3.5, -59.6, -2.8],
-    "center": [-60.02, -3.10],
-    "ana_station": "14990000",
-    "nisar_track": {"path": 140, "frame": 90, "direction": "DESCENDING"},
-    "story": "Maior cidade da Amazônia. A régua do Rio Negro em Manaus mede o pulso da bacia desde 1902: cheia recorde em 2021 (La Niña) e seca recorde em 2023 (El Niño)."
-  },
-  "tefe": {
-    "name": "Tefé / Mamirauá — várzea do Solimões",
-    "bbox": [-65.2, -3.7, -64.4, -3.1],
-    "center": [-64.72, -3.35],
-    "ana_station": "11400000",
-    "nisar_track": {"path": 161, "frame": 176, "direction": "ASCENDING"},
-    "story": "Floresta de várzea alagável. Na seca de 2023 o Lago Tefé aqueceu e centenas de botos morreram; comunidades ribeirinhas ficaram isoladas."
-  }
-}
+{"manaus":{"name":"Manaus — Meeting of the Waters (Rio Negro / Solimões)","bbox":[-60.6,-3.5,-59.6,-2.8],"center":[-60.02,-3.1],"ana_station":"14990000","nisar_track":{"path":140,"frame":90,"direction":"DESCENDING"},"story":"The Amazon's largest city. The Manaus river gauge has tracked the basin's pulse since 1902: record flood in 2021 (La Niña) and record drought in 2023 (El Niño)."},"tefe":{"name":"Tefé / Mamirauá — Solimões floodplain","bbox":[-65.2,-3.7,-64.4,-3.1],"center":[-64.72,-3.35],"ana_station":"11400000","nisar_track":{"path":161,"frame":176,"direction":"ASCENDING"},"story":"Seasonally flooded várzea forest. In the 2023 drought Lake Tefé overheated and hundreds of river dolphins died; riverside communities were cut off."}}

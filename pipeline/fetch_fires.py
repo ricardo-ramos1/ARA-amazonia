@@ -85,7 +85,7 @@ def current_year(bbox) -> pd.DataFrame:
     """Current-year detections via the FIRMS API (standard product where available, else NRT)."""
     key = user_env("FIRMS_MAP_KEY")
     if not key:
-        print("  ! FIRMS_MAP_KEY não definido: sem focos do ano atual")
+        print("  ! FIRMS_MAP_KEY not set: no current-year fires")
         return pd.DataFrame(columns=COLS)
     cache = RAW / f"api_{dt.date.today().year}.csv"
     start = dt.date(dt.date.today().year, 1, 1)
@@ -109,7 +109,7 @@ def current_year(bbox) -> pd.DataFrame:
         if got is not None:
             got["type"] = got.get("type", 0)
             frames.append(got[[c for c in COLS if c in got]])
-        print(f"  API {day} (+{n}d): {0 if got is None else len(got)} focos")
+        print(f"  API {day} (+{n}d): {0 if got is None else len(got)} fires")
         day += dt.timedelta(days=n)
     out = pd.concat(frames, ignore_index=True).drop_duplicates()
     out.to_csv(cache, index=False)
@@ -160,7 +160,7 @@ def main():
         out["regions"][region] = {"dates": m.index.strftime("%Y-%m").tolist(), "count": m.astype(int).tolist()}
         pd.DataFrame({"date": m.index, "fires": m.values}).to_csv(DATA_PROCESSED / f"fires_{region}.csv", index=False)
         yearly = pts[mask].groupby(pts[mask].acq_date.dt.year).size()
-        print(f"  {region}: {mask.sum():,} focos | top anos: {yearly.sort_values().tail(4).to_dict()}")
+        print(f"  {region}: {mask.sum():,} fires | top years: {yearly.sort_values().tail(4).to_dict()}")
     write_json(WEB_DATA / "fires.json", out)
 
     for k in boxes:  # points near each AOI, 2015+ (for the map layer)

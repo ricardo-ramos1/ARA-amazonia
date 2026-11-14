@@ -29,7 +29,7 @@ class RemoteFile(io.RawIOBase):
         r = self.s.get(self.url, headers={"Range": "bytes=0-0"}, allow_redirects=True, timeout=60)
         r.raise_for_status()
         if r.status_code != 206:
-            raise OSError("servidor não aceita leitura parcial (Range)")
+            raise OSError("server does not accept partial reads (Range)")
         self.signed = r.url  # signed S3/CloudFront URL: no auth header needed (and must not be sent to it)
         self.size = int(r.headers["Content-Range"].split("/")[-1])
 
@@ -46,7 +46,7 @@ class RemoteFile(io.RawIOBase):
             except requests.RequestException:
                 if attempt == 3:
                     raise
-        raise OSError("falha ao ler intervalo remoto")
+        raise OSError("failed to read remote byte range")
 
     def _block(self, i: int) -> bytes:
         with self._lock:

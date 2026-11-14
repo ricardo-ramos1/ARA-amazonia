@@ -101,9 +101,9 @@ def http_get(url: str, params: dict | None = None, retries: int = 4, timeout: in
         except requests.RequestException as e:  # noqa: PERF203
             last = e
         wait = 5 * 2**attempt
-        print(f"  tentativa {attempt + 1}/{retries} falhou ({last}); nova tentativa em {wait}s")
+        print(f"  attempt {attempt + 1}/{retries} failed ({last}); retrying in {wait}s")
         time.sleep(wait)
-    raise RuntimeError(f"Falha ao baixar {url}: {last}")
+    raise RuntimeError(f"Download failed {url}: {last}")
 
 
 def write_json(path: Path, obj) -> None:

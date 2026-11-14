@@ -30,13 +30,13 @@ def fetch(lon: float, lat: float) -> pd.DataFrame:
 def main():
     out = {}
     for key, aoi in load_aois().items():
-        print(f"NASA POWER precipitação — {key}…")
+        print(f"NASA POWER precipitation — {key}…")
         df = fetch(*aoi["center"])
         df.to_csv(DATA_PROCESSED / f"precip_{key}.csv", index=False)
         out[key] = {"dates": df.date.dt.strftime("%Y-%m").tolist(),
                     "precip": df.precip_mm_day.round(2).tolist(),
                     "anom": df.precip_anom.round(2).tolist()}
-        print(f"  {len(df)} meses, {df.date.min():%Y-%m} → {df.date.max():%Y-%m}")
+        print(f"  {len(df)} months, {df.date.min():%Y-%m} → {df.date.max():%Y-%m}")
     write_json(WEB_DATA / "precip.json", out)
 
 

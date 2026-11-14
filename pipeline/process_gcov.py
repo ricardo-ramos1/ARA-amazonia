@@ -53,7 +53,7 @@ def open_grid(h5):
             p = f"/science/{band}/GCOV/grids/{fq}"
             if p in h5 and "HHHH" in h5[p]:
                 return h5[p], fq
-    raise KeyError("sem HH no GCOV")
+    raise KeyError("no HH in this GCOV")
 
 
 def block_mean(a, k):
@@ -178,8 +178,8 @@ def ingest_date(aoi_key: str, date: str, rec: dict) -> dict:
             dst.set_band_description(i, d)
         dst.update_tags(date=date, product="NISAR L2 GCOV", scale=str(DB_SCALE))
     mb = sum(g["mb_read"] for g in prim + fill_used)
-    print(f"  {aoi_key} {date}: {len(prim)}+{len(fill_used)} frames, {mb:.0f} MB lidos, "
-          f"cobertura {float((src > 0).mean()):.0%}, {(dt.datetime.now() - t0).seconds}s", flush=True)
+    print(f"  {aoi_key} {date}: {len(prim)}+{len(fill_used)} frames, {mb:.0f} MB read, "
+          f"coverage {float((src > 0).mean()):.0%}, {(dt.datetime.now() - t0).seconds}s", flush=True)
     return {"granules": prim, "filler": fill_used, "filler_date": rec.get("secondary_date"),
             "filler_path": rec.get("secondary_path"), "coverage": round(float((src > 0).mean()), 3),
             "coverage_main": round(float((src == 1).mean()), 3), "mb_read": round(mb, 1), "tif": tif.name,
@@ -246,7 +246,7 @@ def classify(aoi_key: str, aoi: dict, man: dict) -> None:
     lc_path = DATA_PROCESSED / f"landcover_{aoi_key}.npz"
     built = np.nan_to_num(np.load(lc_path)["built"]) if lc_path.exists() else None
     if built is not None and built.shape != shape:
-        print("  ! landcover em outra grade (rode fetch_landcover.py): sem máscara urbana")
+        print("  ! land cover is on another grid (run fetch_landcover.py): no urban mask")
         built = None
     km2 = (WEB_RES_DEG * 111.32) ** 2 * np.cos(np.radians((n + s) / 2))
     for old in [*(WEB_DATA / "sar").glob(f"{aoi_key}_20*.png"), *(WEB_DATA / "sar").glob(f"{aoi_key}_20*.webp")]:
@@ -255,7 +255,7 @@ def classify(aoi_key: str, aoi: dict, man: dict) -> None:
     for date, rec in sorted(man["scenes"].items()):
         tif = DATASET / aoi_key / rec["tif"]
         if rec.get("tif_sha256") and rec["tif_sha256"] != sha256(tif):
-            print(f"  ! {tif.name}: sha256 diferente do manifesto (arquivo alterado?)")
+            print(f"  ! {tif.name}: sha256 differs from the manifest (file modified?)")
         hh, hv, src = read_scene(aoi_key, date)
         cls = np.zeros(shape, "uint8")
         thr = {}
@@ -298,8 +298,8 @@ def classify(aoi_key: str, aoi: dict, man: dict) -> None:
         if opt.exists():
             sc["optical_png"] = f"data/optical/{opt.name}"
         scenes.append(sc)
-        print(f"  {date}: limiar {thr} dB | água {sc['water_km2']} km² (AOI {sc['aoi']['water_km2']}) | "
-              f"floresta alagada {sc['flooded_forest_km2']} km² | cobertura {rec.get('coverage', 0):.0%}")
+        print(f"  {date}: threshold {thr} dB | water {sc['water_km2']} km² (AOI {sc['aoi']['water_km2']}) | "
+              f"flooded forest {sc['flooded_forest_km2']} km² | coverage {rec.get('coverage', 0):.0%}")
     write_json(WEB_DATA / f"sar_{aoi_key}.json", {
         "bounds": bbox, "aoi_bounds": aoi["bbox"], "cells_grid": f"population_{aoi_key}_wide.json",
         "thresholds_db": {"water_range": WATER_DB_RANGE, "flooded_forest": FLOODED_FOREST_DB},
@@ -309,9 +309,9 @@ def classify(aoi_key: str, aoi: dict, man: dict) -> None:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--aoi", default="manaus")
-    ap.add_argument("--reingest", action="store_true", help="refazer todas as cenas do plano")
-    ap.add_argument("--workers", type=int, default=3, help="datas lidas em paralelo")
-    ap.add_argument("--dates", nargs="*", help="refazer só estas datas (YYYY-MM-DD)")
+    ap.add_argument("--reingest", action="store_true", help="re-ingest every date of the plan")
+    ap.add_argument("--workers", type=int, default=3, help="dates read in parallel")
+    ap.add_argument("--dates", nargs="*", help="re-ingest only these dates (YYYY-MM-DD)")
     a = ap.parse_args()
     aoi = load_aois()[a.aoi]
     man_path = DATASET / a.aoi / "manifest.json"
@@ -325,7 +325,7 @@ def main():
                 if (a.dates and d in a.dates) or (not a.dates and (
                     a.reingest or d not in man["scenes"] or not (DATASET / a.aoi / f"{d}_100m.tif").exists()))}
         if todo:
-            print(f"ingestão remota de {len(todo)} datas ({a.workers} em paralelo)…")
+            print(f"remote ingest of {len(todo)} dates ({a.workers} in parallel)…")
             with ProcessPoolExecutor(a.workers) as ex:
                 futs = {ex.submit(ingest_date, a.aoi, d, r): d for d, r in sorted(todo.items())}
                 for fut in as_completed(futs):
@@ -333,17 +333,17 @@ def main():
                     try:
                         man["scenes"][d] = fut.result()
                     except Exception as err:  # noqa: BLE001
-                        print(f"  ! {d}: falhou ({err}) — rode de novo para tentar só as que faltam")
+                        print(f"  ! {d}: failed ({err}) — run again to retry only the missing dates")
                         continue
                     man["description"] = (
-                        "NISAR L2 GCOV, área AOI ±1°, lido remotamente (só HH/HV, frequencyB 80 m ou A 20 m→80 m), "
-                        "média da potência linear em ~100 m WGS84; int16 dB×10: banda 1 HH, 2 HV, 3 fonte "
-                        "(1 trilha principal, 2 trilha de preenchimento ≤12 dias)")
+                        "NISAR L2 GCOV over the AOI ±1°, read remotely (HH/HV only, frequencyB 80 m or A 20 m→80 m), "
+                        "linear-power mean on a ~100 m WGS84 grid; int16 dB×10: band 1 HH, 2 HV, 3 source "
+                        "(1 main track, 2 filler track ≤12 days away)")
                     man["params"] = {"res_deg": WEB_RES_DEG, "edge_px": EDGE_PX, "bbox": sar_grid(aoi)[0]}
                     man["scenes"] = dict(sorted(man["scenes"].items()))
                     write_json(man_path, man)  # after each date, so an interrupted run keeps what it got
     if not man["scenes"]:
-        raise SystemExit("Dataset vazio: rode `python pipeline/search_nisar.py --plan` e depois este script.")
+        raise SystemExit("Empty dataset: run `python pipeline/search_nisar.py --plan`, then this script.")
     classify(a.aoi, aoi, man)
 
 

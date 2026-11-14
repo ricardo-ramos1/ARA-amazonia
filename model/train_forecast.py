@@ -109,10 +109,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--aoi", default="manaus")
     ap.add_argument("--target", choices=["precip", "river", "fire"], default="precip")
-    ap.add_argument("--split", default="2015-12-01", help="último mês (data de emissão) do treino")
+    ap.add_argument("--split", default="2015-12-01", help="last issue month of the training period")
     ap.add_argument("--baseline", choices=["clim", "recent"], default="clim",
-                    help="o modelo aprende o desvio em relação a: clim = média histórica do mês (treino); "
-                         "recent = média do mesmo mês nos 3 anos anteriores (acompanha mudanças de patamar)")
+                    help="the model learns the departure from: clim = historical monthly mean (training data); "
+                         "recent = same month over the previous 3 years (follows level shifts)")
     a = ap.parse_args()
 
     fire = a.target == "fire"
@@ -121,7 +121,7 @@ def main():
     inv = np.expm1 if fire else (lambda v: np.asarray(v, dtype=float))  # back to fires/month
     oni = pd.read_csv(DATA_PROCESSED / "oni.csv", parse_dates=["date"]).set_index("date")["oni"]
     split = pd.Timestamp(a.split)
-    unit = {"precip": "mm/dia", "river": "m", "fire": "focos/mês"}[a.target]
+    unit = {"precip": "mm/day", "river": "m", "fire": "fires/month"}[a.target]
     out = {"aoi": a.aoi, "target": a.target, "split": a.split, "unit": unit, "baseline": a.baseline, "horizons": {}}
     importances = {}
 
@@ -181,21 +181,21 @@ def main():
                                     random_state=0, scoring="neg_mean_absolute_error")
         groups = {}
         for f, v in zip(feats, pi.importances_mean):
-            g = ("ENSO (ONI)" if f.startswith("oni") else "memória do alvo" if f.startswith("anom")
-                 else "chuva" if f.startswith("rain") else "nível do rio" if f.startswith("river") else "mês")
+            g = ("ENSO (ONI)" if f.startswith("oni") else "target memory" if f.startswith("anom")
+                 else "rainfall" if f.startswith("rain") else "river level" if f.startswith("river") else "month")
             groups[g] = groups.get(g, 0) + max(v, 0)
         tot = sum(groups.values()) or 1
         res["importance"] = {g: round(v / tot, 3) for g, v in sorted(groups.items(), key=lambda kv: -kv[1])}
         importances[h] = res["importance"]
         out["horizons"][str(h)] = res
         mm, cc, pp = res["model"], res["climatology"], res["persistence"]
-        print(f"h={h}m  modelo MAE={mm['mae']:.3f} NSE={mm['nse']:+.2f} skill={mm['skill_vs_clim']:+.2f} | "
-              f"clim MAE={cc['mae']:.3f} | recente MAE={res['recent_years']['mae']:.3f} skill={res['recent_years']['skill_vs_clim']:+.2f} | persist MAE={pp['mae']:.3f} skill={pp['skill_vs_clim']:+.2f}"
-              + (f" | previsão {res['live']['target_date']}: {res['live']['pred']} "
+        print(f"h={h}m  model MAE={mm['mae']:.3f} NSE={mm['nse']:+.2f} skill={mm['skill_vs_clim']:+.2f} | "
+              f"clim MAE={cc['mae']:.3f} | recent MAE={res['recent_years']['mae']:.3f} skill={res['recent_years']['skill_vs_clim']:+.2f} | persist MAE={pp['mae']:.3f} skill={pp['skill_vs_clim']:+.2f}"
+              + (f" | forecast {res['live']['target_date']}: {res['live']['pred']} "
                  f"[{res['live']['p10']}, {res['live']['p90']}] (clim {res['live']['clim']})" if "live" in res else ""))
 
     for h, imp in importances.items():
-        print(f"  importância h={h}m: " + ", ".join(f"{g} {v:.0%}" for g, v in imp.items()))
+        print(f"  importance h={h}m: " + ", ".join(f"{g} {v:.0%}" for g, v in imp.items()))
     write_json(WEB_DATA / f"forecast_{a.aoi}_{a.target}.json", out)
 
 

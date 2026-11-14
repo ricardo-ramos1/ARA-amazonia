@@ -51,7 +51,7 @@ def main():
                      for x, y, p in zip(xs, ys, arr[rows, cols])]
             write_json(WEB_DATA / f"population_{key}.json",
                        {"cell_deg": abs(tr.a), "total": round(float(arr.sum())), "cells": cells})
-            print(f"  {key}: {len(cells)} células, {arr.sum():,.0f} habitantes")
+            print(f"  {key}: {len(cells)} cells, {arr.sum():,.0f} people")
 
 
 if __name__ == "__main__":

@@ -51,8 +51,8 @@ def main():
                           dst_nodata=np.nan)
                 out[k] = np.where(np.isfinite(frac), frac, out[k])
         np.savez_compressed(DATA_PROCESSED / f"landcover_{key}.npz", **out)
-        print(f"  {key}: urbano {np.nanmean(out['built']) * 100:.1f}% | água {np.nanmean(out['water']) * 100:.1f}%"
-              f" | área úmida {np.nanmean(out['wetland']) * 100:.1f}% | árvores {np.nanmean(out['tree']) * 100:.1f}%")
+        print(f"  {key}: urban {np.nanmean(out['built']) * 100:.1f}% | water {np.nanmean(out['water']) * 100:.1f}%"
+              f" | wetland {np.nanmean(out['wetland']) * 100:.1f}% | trees {np.nanmean(out['tree']) * 100:.1f}%")
 
 
 if __name__ == "__main__":

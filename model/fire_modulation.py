@@ -42,7 +42,7 @@ def main():
     thr = d.rmin.quantile(1 / 3)
     low = d.rmin < thr
     g = lambda m: round(float(np.exp(lr[m].mean())), 2)  # noqa: E731  geometric mean of ratios
-    out = {"season": "ago–out", "years": d.year.tolist(), "season_fires": d.season.tolist(),
+    out = {"season": "Aug–Oct", "years": d.year.tolist(), "season_fires": d.season.tolist(),
            "ratio_vs_prev3": d.ratio.round(2).tolist(), "oni_jas": d.oni.round(2).tolist(),
            "river_min_m": d.rmin.round(2).tolist(),
            "el_nino": g(nino), "neutral": g(~nino & ~nina), "la_nina": g(nina),
@@ -50,9 +50,9 @@ def main():
            "n_la_nina": int(nina.sum()), "low_river_threshold_m": round(float(thr), 2),
            "spearman_ratio_vs_river_min": round(float(lr.corr(d.rmin, method="spearman")), 2)}
     write_json(WEB_DATA / "fire_modulation.json", out)
-    print(f"{len(d)} temporadas ({d.year.min()}–{d.year.max()}): El Niño x{out['el_nino']} (n={out['n_el_nino']}), "
-          f"La Niña x{out['la_nina']} (n={out['n_la_nina']}), neutro x{out['neutral']} | rio baixo (<{thr:.2f} m) "
-          f"x{out['low_river']}, demais x{out['other_river']}")
+    print(f"{len(d)} seasons ({d.year.min()}–{d.year.max()}): El Niño x{out['el_nino']} (n={out['n_el_nino']}), "
+          f"La Niña x{out['la_nina']} (n={out['n_la_nina']}), neutral x{out['neutral']} | low river (<{thr:.2f} m) "
+          f"x{out['low_river']}, other years x{out['other_river']}")
     print(d.tail(4).round(2).to_string(index=False))
 
 

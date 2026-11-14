@@ -148,22 +148,22 @@ def main():
 
     out = {"plants": plants, "series": series, "links": links, "dry_months": DRY, "base_years": BASE_YEARS,
            "drought_dry_gen_vs_2019_2022": headline, "solar": solar,
-           "diesel": {"threshold_m": r(thr), "definition": "mínima anual entre as 10% mais baixas (1902–2022), Rio Negro em Manaus",
+           "diesel": {"threshold_m": r(thr), "definition": "annual minimum among the lowest 10% (1902–2022), Rio Negro at Manaus",
                       "annual_min_m": years_below, "forecast": risk}}
     write_json(WEB_DATA / "energy.json", out)
 
-    print("Usinas (fator de capacidade na seca set–nov):")
+    print("Plants (dry-season Sep–Nov capacity factor):")
     for p in plants:
         cf = p["dry_cf_by_year"]
-        print(f"  {p['name']:14s} {p['cap_mw']:>6} MW | corr vazão×geração {p['corr_inflow_gen']} | elasticidade seca {p['elasticity_dry']} | "
+        print(f"  {p['name']:14s} {p['cap_mw']:>6} MW | corr inflow×generation {p['corr_inflow_gen']} | dry elasticity {p['elasticity_dry']} | "
               f"2019 {cf.get(2019)} 2022 {cf.get(2022)} 2023 {cf.get(2023)} 2024 {cf.get(2024)} 2025 {cf.get(2025)} 2026 {cf.get(2026)} | "
-              f"último {p['last']['date']}: vazão {p['last']['inflow_pct']} do normal")
-    print("Ligações clima (Spearman, vazão seca × ONI / × mínima Manaus):", links)
-    print("Geração seca Madeira+Xingu vs 2019–2022:", headline)
+              f"last {p['last']['date']}: inflow {p['last']['inflow_pct']} of normal")
+    print("Climate links (Spearman, dry-season inflow × ONI / × Manaus minimum):", links)
+    print("Dry-season generation Madeira+Xingu vs 2019–2022:", headline)
     for k, v in solar.items():
-        print(f"Solar {k}: {v['ghi_annual']} kWh/m²/dia; fumaça corta {v["smoke_loss_pct"]}% (quartil mais enfumaçado vs mais limpo, corr {v["corr_ghi_aod"]}, n={v["n_months"]}), "
-              f"{v['loss_per_0_1_aod_pct']}% por +0,1 AOD; corr AOD×focos {v['corr_aod_fires']}")
-    print(f"Diesel: seca severa < {thr:.2f} m; previsão: {risk}")
+        print(f"Solar {k}: {v['ghi_annual']} kWh/m²/day; smoke cuts {v['smoke_loss_pct']}% (smokiest vs cleanest quartile, corr {v['corr_ghi_aod']}, n={v['n_months']}), "
+              f"{v['loss_per_0_1_aod_pct']}% per +0.1 AOD; corr AOD×fires {v['corr_aod_fires']}")
+    print(f"Diesel: severe drought < {thr:.2f} m; forecast: {risk}")
 
 
 if __name__ == "__main__":
