@@ -1,4 +1,4 @@
-# Dancing with the SARs — static site image.
+# PulSAR — static site image.
 # Stage 1 builds the Vite app (data in public/data is copied into the build); stage 2 serves it with nginx.
 
 FROM node:20-alpine AS build
