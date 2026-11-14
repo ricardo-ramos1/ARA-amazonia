@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+
+# raw / large data (kept outside the project: ~/spaceapps_data)
+data/raw/
+*.h5
+
+# secrets and local settings
+.env
+.netrc
+.claude/
+
+# web
+node_modules/
+web/dist/

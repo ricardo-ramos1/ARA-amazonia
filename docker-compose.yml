@@ -1,0 +1,39 @@
+# Dancing with the SARs — publish the web app.
+#
+#   docker compose up -d --build                       -> http://<server>:8080
+#   DOMAIN=meusite.com.br docker compose --profile https up -d --build
+#                                                      -> https://meusite.com.br (certificate issued automatically)
+#
+# Settings can also go in a .env file next to this one (see .env.example).
+
+services:
+  web:
+    build: ./web
+    image: dancing-with-the-sars:latest
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"
+    # Optional: serve the pipeline output directly, so new data goes live without rebuilding the image.
+    # volumes:
+    #   - ./web/public/data:/usr/share/nginx/html/data:ro
+
+  # HTTPS for a real domain. The domain's DNS (A/AAAA record) must point to this server and ports 80/443 must be open.
+  caddy:
+    image: caddy:2.8-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    depends_on: [web]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # certificates (persist across restarts)
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

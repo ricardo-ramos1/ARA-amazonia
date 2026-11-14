@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dancing with the SARs — Amazônia & ENSO</title>
+  <meta name="description" content="Radar NISAR (banda L), El Niño/La Niña e as pessoas da Amazônia: rios, floresta alagada, incêndios e energia em Manaus e Tefé. NASA Space Apps Challenge 2026." />
+  <meta name="theme-color" content="#05080d" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Dancing with the SARs — Amazônia & ENSO" />
+  <meta property="og:description" content="Radar NISAR, El Niño e as pessoas da Amazônia: rios, fogo e energia. NASA Space Apps 2026." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>" />
+</head>
+<body data-mode="rios">
+  <nav class="tabs" id="modebar" role="tablist" aria-label="Modo de visualização">
+    <button data-tab="rios" class="active">💧 Rios</button>
+    <button data-tab="fogo">🔥 Fogo</button>
+    <button data-tab="agora">📡 Fogo agora</button>
+    <button data-tab="energia">⚡ Energia</button>
+  </nav>
+  <div id="map"></div>
+
+  <!-- feature dock: the things the user acts on get their own place, over the map -->
+  <section id="dock" class="only-agora only-energia" aria-label="Destaques">
+    <div class="dock-head">
+      <h2 id="dock-title"></h2>
+      <span id="dock-hint" class="muted"></span>
+    </div>
+    <div id="dock-cards" class="cards"></div>
+  </section>
+
+  <aside id="panel">
+    <header>
+      <h1>Dancing with the SARs</h1>
+      <p class="sub">Radar NISAR, El Niño e as pessoas da Amazônia</p>
+    </header>
+
+    <div class="row tight">
+      <select id="aoi" aria-label="Área de estudo"></select>
+    </div>
+    <p id="story" class="story"></p>
+
+    <div id="enso-now" class="badge"></div>
+
+    <!-- shared radar timeline (rios + fogo) -->
+    <section class="only-rios only-fogo">
+      <h2>Radar NISAR <span class="info" title="Cada data é uma passagem do satélite NISAR (banda L, polarização HH). Arraste para ver a mudança.">ⓘ</span></h2>
+      <input id="date" type="range" min="0" max="0" value="0" />
+      <div id="date-label" class="muted"></div>
+    </section>
+
+    <!-- RIOS -->
+    <section class="only-rios">
+      <div id="river-stats" class="stats"></div>
+      <div id="validation" class="line"></div>
+      <div class="toggles">
+        <label><input type="checkbox" id="t-sar" checked /> Radar</label>
+        <label><input type="checkbox" id="t-opt" /> Óptico</label>
+        <label><input type="checkbox" id="t-pop" checked /> População 3D</label>
+      </div>
+      <div class="legend">
+        <span><i style="background:#1f78f2"></i>Água</span>
+        <span><i style="background:#1ad9bf"></i>Floresta alagada</span>
+        <span><i style="background:#bf8cf2"></i>Urbano</span>
+        <span><i style="background:#f59e0b"></i>Pessoas junto à água</span>
+      </div>
+    </section>
+
+    <!-- FOGO -->
+    <section class="only-fogo">
+      <div id="fire-stats" class="stats"></div>
+      <div id="scar-line" class="line"></div>
+      <div class="toggles">
+        <label><input type="checkbox" id="t-fire" checked /> Focos (60 dias)</label>
+        <label><input type="checkbox" id="t-scar" checked /> Cicatrizes</label>
+        <label><input type="checkbox" id="t-popf" checked /> População 3D</label>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:#ff3b1f"></i>Foco FIRMS</span>
+        <span><i style="background:#e11d48"></i>Cicatriz (radar)</span>
+        <span><i style="background:#f97316"></i>Pessoas perto do fogo</span>
+      </div>
+    </section>
+
+    <!-- FOGO AGORA -->
+    <section class="only-agora">
+      <div id="now-head" class="muted"></div>
+      <div id="now-stats" class="stats"></div>
+      <h2>Previsão do vento <span class="info" title="Setas: para onde o vento sopra (previsão horária Open-Meteo). A fumaça e o fogo tendem a seguir essa direção.">ⓘ</span></h2>
+      <input id="hour" type="range" min="0" max="23" value="0" />
+      <div id="hour-label" class="muted"></div>
+      <div class="toggles">
+        <label><input type="checkbox" id="t-now-fire" checked /> Focos 48 h</label>
+        <label><input type="checkbox" id="t-wind" checked /> Vento</label>
+        <label><input type="checkbox" id="t-smoke" checked /> Fumaça</label>
+        <label><input type="checkbox" id="t-popn" checked /> População 3D</label>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:#dc2626"></i>Risco muito alto</span>
+        <span><i class="dot" style="background:#f97316"></i>Alto</span>
+        <span><i class="dot" style="background:#facc15"></i>Moderado</span>
+        <span><i class="dot" style="background:#6b7280"></i>Baixo</span>
+        <span><i style="background:#c084fc"></i>Pessoas na rota da fumaça</span>
+      </div>
+      <p class="note">Indicativo, não é alerta oficial. <span class="info" title="Risco = índice de Angström (umidade e temperatura do ar) no horário mais seco das próximas 24 h, mais a chuva prevista e as rajadas. Fumaça = setor de 40 km a favor do vento médio das próximas 12 h (círculo de 10 km se o vento estiver calmo).">ⓘ</span></p>
+    </section>
+
+    <!-- ENERGIA -->
+    <section class="only-energia">
+      <div id="energy-stats" class="stats"></div>
+      <div id="diesel-line" class="line"></div>
+      <div class="toggles">
+        <label><input type="checkbox" id="t-solar" checked /> Potencial solar <span class="info" title="NASA POWER, média anual de irradiação (GHI). A grade original é de 1° (~110 km); o relevo suave é só uma interpolação visual, sem informação nova. As cores são relativas a esta área.">ⓘ</span></label>
+        <label><input type="checkbox" id="t-plants" checked /> Hidrelétricas</label>
+      </div>
+      <div class="legend">
+        <span><i style="background:#22c55e"></i>Vazão normal</span>
+        <span><i style="background:#f59e0b"></i>Abaixo</span>
+        <span><i style="background:#dc2626"></i>Muito abaixo (&lt; 60%)</span>
+        <span id="solar-legend"></span>
+      </div>
+    </section>
+  </aside>
+
+  <aside id="charts">
+    <!-- RIOS -->
+    <div class="chart-box only-rios">
+      <h2>El Niño × nível do Rio Negro <span class="info" title="Barras: ONI (vermelho = El Niño, azul = La Niña). Linha: média mensal da régua de Manaus (ANA).">ⓘ</span></h2>
+      <canvas id="chart-enso"></canvas>
+    </div>
+    <div class="chart-box only-rios only-fogo">
+      <div class="row">
+        <h2>Previsão com ML <span class="info" title="Teste fora da amostra, separado por tempo. Skill = 1 − MSE/MSE da climatologia: acima de 0 significa melhor que a média histórica.">ⓘ</span></h2>
+        <span>
+          <select id="target"></select>
+          <select id="horizon"><option value="1">1 mês</option><option value="3" selected>3 meses</option><option value="6">6 meses</option></select>
+        </span>
+      </div>
+      <canvas id="chart-forecast"></canvas>
+      <table id="metrics"></table>
+      <p id="fc-line" class="line"></p>
+    </div>
+
+    <!-- FOGO -->
+    <div class="chart-box only-fogo">
+      <h2>Focos por ano no Amazonas <span class="info" title="NASA FIRMS / MODIS, só fogo em vegetação. Barras vermelhas = El Niño em jul–set. Ano atual parcial.">ⓘ</span></h2>
+      <canvas id="chart-fire"></canvas>
+      <p id="fire-mod" class="line"></p>
+    </div>
+
+    <!-- ENERGIA -->
+    <div class="chart-box only-energia">
+      <div class="row">
+        <h2>Água × energia <span class="info" title="Barras: geração média do mês (MW, ONS). Linha: vazão que chega à usina (m³/s); tracejado = normal do mês (2016–2022).">ⓘ</span></h2>
+        <select id="plant-sel"></select>
+      </div>
+      <canvas id="chart-hydro"></canvas>
+      <p id="hydro-line" class="line"></p>
+    </div>
+    <div class="chart-box only-energia">
+      <h2>Na seca (set–nov), ano a ano <span class="info" title="Fator de capacidade = geração ÷ potência instalada. Barras vermelhas = anos de El Niño (ONI jul–set ≥ 0,5).">ⓘ</span></h2>
+      <canvas id="chart-dry"></canvas>
+    </div>
+    <div class="chart-box only-energia">
+      <h2>Sol × fumaça <span class="info" title="NASA POWER: irradiação solar média por mês (barras) e aerossóis/fumaça (linha, AOD 550 nm) no centro da área.">ⓘ</span></h2>
+      <canvas id="chart-solar"></canvas>
+      <p id="solar-line" class="line"></p>
+    </div>
+
+    <!-- AGORA -->
+    <div class="chart-box only-agora">
+      <h2>Próximas 72 h <span class="info" title="Centro da área. Índice de Angström: abaixo de 2,0 = muito favorável ao fogo; 2,0–2,5 = favorável; acima de 4 = improvável.">ⓘ</span></h2>
+      <canvas id="chart-now"></canvas>
+      <p id="now-line" class="line"></p>
+    </div>
+  </aside>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
