@@ -54,6 +54,9 @@
     <section class="only-rios">
       <div id="river-stats" class="stats"></div>
       <div id="validation" class="line"></div>
+      <p class="enso-link"><b>🌡️ El Niño link</b> El Niño shifts tropical winds and cuts Amazon rainfall; the river answers
+        months later. Record drought in 2023 (El Niño), record flood in 2021 (La Niña). ENSO is the second driver of the
+        river forecast.</p>
       <div class="toggles">
         <label><input type="checkbox" id="t-sar" checked /> Radar</label>
         <label><input type="checkbox" id="t-opt" /> Optical</label>
@@ -64,7 +67,8 @@
         <span><i style="background:#1ad9bf"></i>Flooded forest</span>
         <span><i style="background:#bf8cf2"></i>Urban</span>
         <span><i style="background:#f59e0b"></i>People by the water</span>
-        <span><i style="background:repeating-linear-gradient(135deg,#8c99ad 0 2px,transparent 2px 5px)"></i>No radar coverage</span>
+        <span><i style="background:repeating-linear-gradient(135deg,#8c99ad 0 2px,transparent 2px 5px)"></i>No radar coverage
+          <span class="info" title="Areas no NISAR pass covered within 12 days of the date: shown hatched, never guessed. In Tefé (Jun–Jul) one frame of the main pass was delivered without valid measurements (values near −54 dB, below the radar's noise floor) and no other pass covers that block.">ⓘ</span></span>
       </div>
     </section>
 
@@ -72,6 +76,9 @@
     <section class="only-fogo">
       <div id="fire-stats" class="stats"></div>
       <div id="scar-line" class="line"></div>
+      <p class="enso-link"><b>🌡️ El Niño link</b> El Niño alone barely moves fire counts (+1%). What matters is drought
+        reaching the river: low-river years bring +39% fire. The baseline is human (deforestation); climate sets how much
+        of it burns.</p>
       <div class="toggles">
         <label><input type="checkbox" id="t-fire" checked /> Fires (60 days)</label>
         <label><input type="checkbox" id="t-scar" checked /> Burn scars</label>
@@ -88,6 +95,8 @@
     <section class="only-agora">
       <div id="now-head" class="muted"></div>
       <div id="now-stats" class="stats"></div>
+      <p class="enso-link"><b>🌡️ El Niño link</b> The short-term effect: hotter, drier air pushes the Angström index into
+        the danger range, and with little rain the smoke lingers over towns for days.</p>
       <h2>Wind forecast <span class="info" title="Arrows show where the wind blows to (Open-Meteo hourly forecast). Smoke and fire tend to follow it.">ⓘ</span></h2>
       <input id="hour" type="range" min="0" max="23" value="0" />
       <div id="hour-label" class="muted"></div>
@@ -111,6 +120,9 @@
     <section class="only-energia">
       <div id="energy-stats" class="stats"></div>
       <div id="diesel-line" class="line"></div>
+      <p class="enso-link"><b>🌡️ El Niño link</b> Less rain, less water at the plants: inflow to Balbina (Manaus' supply)
+        falls with El Niño (ρ = −0.68), and run-of-river plants made 54% of normal in the 2024 drought. Low rivers also
+        stop the diesel barges that power isolated towns.</p>
       <div class="toggles">
         <label><input type="checkbox" id="t-solar" checked /> Solar potential <span class="info" title="NASA POWER annual mean irradiance (GHI). The source grid is 1° (~110 km); the smooth relief is a visual interpolation only and adds no information. Colors are relative to this area.">ⓘ</span></label>
         <label><input type="checkbox" id="t-plants" checked /> Hydropower plants</label>

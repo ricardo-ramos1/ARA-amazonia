@@ -66,6 +66,10 @@ body[data-mode=energia] .only-energia { display: block; }
 .line b { color: var(--accent); }
 .line .warn { color: #fbbf24; }
 .legend i.dot { border-radius: 50%; }
+/* per-theme "how El Niño affects this" card */
+.enso-link { margin: 10px 0; padding: 8px 10px; border-left: 3px solid var(--nino); border-radius: 6px;
+  background: rgba(239, 68, 68, .08); font-size: 12px; line-height: 1.45; color: #c7d2de; }
+.enso-link b { display: block; color: var(--fg); font-size: 12px; margin-bottom: 2px; }
 
 /* feature dock: cards the user acts on (fire clusters, power plants), floating at the bottom of the map */
 #dock { position: absolute; z-index: 4; left: 360px; right: 472px; bottom: 16px; padding: 10px 12px 12px;
