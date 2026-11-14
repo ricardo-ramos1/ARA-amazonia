@@ -47,6 +47,39 @@ const state = {
 };
 const charts = {};
 
+// ---------------------------------------------------------------- scene images
+// Radar/optical overlays are ~1–2 MB WebP each. The compressed files are cached (and the other dates preloaded in
+// the background); only the current scene is decoded (a decoded 3333×3000 image is ~40 MB). A load that finishes
+// after the user has moved to another date is dropped, so an old scene never lands on top of the current one.
+const blobCache = new Map();
+const getBlob = (url) => {
+  if (!blobCache.has(url)) blobCache.set(url, fetch(url).then((r) => (r.ok ? r.blob() : null)).catch(() => null));
+  return blobCache.get(url);
+};
+
+function loadSceneImages() {
+  const sc = currentScene();
+  state.img = { scene: sc };
+  if (!sc) return;
+  const wanted = [['sar', sc.png], ...(state.show.opt && sc.optical_png ? [['opt', sc.optical_png]] : [])];
+  for (const [kind, url] of wanted) {
+    getBlob(url)
+      .then((b) => (b ? createImageBitmap(b) : null))
+      .then((bm) => {
+        if (!bm || state.img.scene !== currentScene() || state.img.scene !== sc) return; // stale: user moved on
+        state.img[kind] = bm;
+        render();
+      });
+  }
+}
+
+async function preloadScenes(aoi) {
+  for (const sc of state.sar?.scenes ?? []) {
+    if (state.aoi !== aoi) return; // switched area: stop
+    await getBlob(sc.png);
+  }
+}
+
 // ---------------------------------------------------------------- map
 const map = new maplibregl.Map({
   container: 'map', style: BASEMAP, center: [-60.02, -3.1], zoom: 9, pitch: 55, bearing: -20, antialias: true,
@@ -148,8 +181,9 @@ function render() {
   const sh = state.show;
 
   if (m === 'rios') {
-    if (sh.opt && sc?.optical_png) L.push(new BitmapLayer({ id: 'opt', image: sc.optical_png, bounds: state.sar.bounds }));
-    if (sh.sar && sc) L.push(new BitmapLayer({ id: 'sar', image: sc.png, bounds: state.sar.bounds, opacity: sh.opt ? 0.55 : 0.85 }));
+    const img = state.img?.scene === sc ? state.img : {}; // only images of the current scene
+    if (sh.opt && img.opt) L.push(new BitmapLayer({ id: 'opt', image: img.opt, bounds: state.sar.bounds }));
+    if (sh.sar && img.sar) L.push(new BitmapLayer({ id: 'sar', image: img.sar, bounds: state.sar.bounds, opacity: sh.opt ? 0.6 : 0.95 }));
     if (sh.pop && state.popWide) {
       const cells = sceneCells(sc);
       L.push(popLayer('pop', state.popWide, (d, i) => {
@@ -655,6 +689,7 @@ function setMode(mode) {
     state.idx = nScenes - 1;
     recomputeNearFire();
     updateTimeline();
+    loadSceneImages();
   }
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === mode));
   const sel = $('target');
@@ -718,6 +753,8 @@ async function selectAoi(key) {
   $('hour').max = Math.max(0, (now?.steps?.length ?? 1) - 1);
   $('hour').value = 0;
   recomputeNearFire();
+  loadSceneImages();
+  preloadScenes(key);
   ensoChart();
   updateTimeline();
   updateNowPanel();
@@ -745,13 +782,22 @@ async function init() {
 
   $('aoi').onchange = (e) => selectAoi(e.target.value);
   document.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => setMode(b.dataset.tab); });
-  $('date').oninput = (e) => { state.idx = +e.target.value; state.idxTouched = true; recomputeNearFire(); updateTimeline(); render(); };
+  $('date').oninput = (e) => {
+    state.idx = +e.target.value; state.idxTouched = true;
+    recomputeNearFire(); updateTimeline(); loadSceneImages(); render();
+  };
   $('hour').oninput = (e) => { state.hour = +e.target.value; updateHourLabel(); render(); };
   $('horizon').onchange = forecastChart;
   $('target').onchange = forecastChart;
   const toggles = { 't-sar': 'sar', 't-opt': 'opt', 't-pop': 'pop', 't-fire': 'fire', 't-scar': 'scar', 't-popf': 'popf',
     't-now-fire': 'nowFire', 't-wind': 'wind', 't-smoke': 'smoke', 't-popn': 'popn', 't-solar': 'solar', 't-plants': 'plants' };
-  for (const [id, k] of Object.entries(toggles)) $(id).onchange = (e) => { state.show[k] = e.target.checked; render(); };
+  for (const [id, k] of Object.entries(toggles)) {
+    $(id).onchange = (e) => {
+      state.show[k] = e.target.checked;
+      if (k === 'opt' && e.target.checked) loadSceneImages(); // optical is only fetched when asked for
+      render();
+    };
+  }
 
   window.addEventListener('hashchange', () => setMode(modeFromHash(location.hash.slice(1))));
   state.mode = modeFromHash(location.hash.slice(1)) ?? 'rios';

@@ -227,12 +227,19 @@ def water_threshold(hh, fallback: float | None = None) -> float:
 
 
 def overlay_png(hh_db, cls, path: Path):
-    gray = np.clip((hh_db + 25) / 25, 0, 1)
-    rgba = np.dstack([gray, gray, gray, np.isfinite(hh_db).astype(float)])
-    rgba[cls == 1, :3] = (0.12, 0.47, 0.95)   # open water
-    rgba[cls == 2, :3] = (0.10, 0.85, 0.75)   # flooded forest
-    rgba[cls == 3, :3] = (0.75, 0.55, 0.95)   # urban double-bounce (excluded from flooded forest)
-    rgba[np.isnan(rgba)] = 0
+    """Map overlay over the whole wide grid, so every date is the same rectangle:
+    classes in strong colors; dry land as a dim, semi-transparent backscatter texture (context, not the message);
+    pixels no pass covered as faint diagonal hatching ("no radar coverage"), not a transparent hole."""
+    valid = np.isfinite(hh_db)
+    gray = 0.10 + 0.32 * np.clip((np.nan_to_num(hh_db, nan=-25) + 25) / 25, 0, 1)
+    rgba = np.dstack([gray, gray * 1.04, gray * 1.1, np.where(valid, 0.55, 0.0)])
+    rgba[cls == 1] = (0.12, 0.47, 0.95, 1.0)   # open water
+    rgba[cls == 2] = (0.10, 0.85, 0.75, 1.0)   # flooded forest
+    rgba[cls == 3] = (0.75, 0.55, 0.95, 1.0)   # urban double-bounce (excluded from flooded forest)
+    r, c = np.indices(hh_db.shape)
+    stripe = ((r + c) // 6) % 4 == 0
+    rgba[~valid] = (0.55, 0.60, 0.68, 0.0)
+    rgba[~valid & stripe, 3] = 0.28
     save_overlay(path, rgba)
 
 

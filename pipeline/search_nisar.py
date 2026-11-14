@@ -128,8 +128,12 @@ def wide_plan(key: str, aoi: dict) -> dict:
     wide = box(*sar_grid(aoi)[0])
     res = asf.search(dataset=asf.DATASET.NISAR, processingLevel="GCOV", intersectsWith=wide.wkt, maxResults=4000)
     # water/flooded-forest thresholds are HH-based: drop V-only acquisitions (DV/SV codes)
+    # Standard science modes only: frequencyA at 20 or 40 MHz (bandwidth code "20xx"/"40xx"). Narrow 5 MHz
+    # modes ("05xx", "00xx") showed noise-floor stripes between sub-swaths that the water mask read as rivers.
     has_hh = lambda pol: pol[:2] in ("DH", "SH") or pol[2:] in ("DH", "SH")  # noqa: E731
-    res = [r for r in res if has_hh(r.properties["fileName"].split("_")[9])]
+    science = lambda bw: bw[:2] in ("20", "40")  # noqa: E731
+    res = [r for r in res if has_hh(r.properties["fileName"].split("_")[9])
+           and science(r.properties["fileName"].split("_")[8])]
     groups = {}
     for r in res:
         p = r.properties
