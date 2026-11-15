@@ -6,3 +6,6 @@ h5py
 rasterio
 asf_search
 matplotlib
+scipy
+shapely
+pillow

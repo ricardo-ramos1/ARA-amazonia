@@ -9,7 +9,7 @@ For every processed NISAR scene (web/public/data/sar_<aoi>.json), over the whole
      sediment-laden "white water" (Solimões) is bright in NIR, so NDWI misses it; SWIR is absorbed by any water.
   5. compare with SAR water (HH < per-pass threshold): precision, recall, F1, IoU, accuracy — for the whole
      area and for the original AOI window (comparable with earlier runs)
-Also writes a true-colour PNG so the app can show radar vs optical side by side.
+Also writes a true-colour WebP so the app can show radar vs optical side by side.
 
 Output: web/public/data/validation_<aoi>.json and web/public/data/optical/<aoi>_<date>.webp
 Usage:  python pipeline/validate_optical.py --aoi manaus [--workers 3]
@@ -136,7 +136,7 @@ def sar_water(aoi_key, sc):
 
 
 def validate_date(aoi_key: str, sc: dict, refresh: bool, cached_items):
-    """Worker: one NISAR date -> metrics (whole area + AOI window) and the optical PNG."""
+    """Worker: one NISAR date -> metrics (whole area + AOI window) and the optical WebP."""
     aoi = load_aois()[aoi_key]
     bbox, dst_tr, shape, _ = sar_grid(aoi)
     water, need = sar_water(aoi_key, sc)

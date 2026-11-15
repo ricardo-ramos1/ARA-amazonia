@@ -6,14 +6,15 @@ Search needs no login. Download needs a free NASA Earthdata account:
 
 Examples:
   python pipeline/search_nisar.py                       # catalog of GCOV/GUNW for every AOI
-  python pipeline/search_nisar.py --aoi manaus --download --n 3
-      -> downloads 3 GCOV dates (first, middle, last) from the AOI's preferred track (config/aois.json);
-         scenes already in the local dataset (~/spaceapps_data/nisar/<aoi>/manifest.json) are NOT downloaded again
+  python pipeline/search_nisar.py --plan
+      -> the normal path: every date of each AOI's main track over the wide (±1°) grid, with up to 2 filler
+         tracks and a few reserve passes ≤ 12 days away -> <dataset>/<aoi>/plan.json. Nothing is downloaded:
+         process_gcov.py then reads only the HH/HV blocks it needs, remotely.
   python pipeline/search_nisar.py --validate
-      -> NO download: checks the local dataset against the ASF catalogue (granule still published, same MD5,
-         reprocessed since ingest?) and lists newer scenes on the same track
-
-GCOV files are ~2–7 GB each, so pick few dates first.
+      -> NO download: checks the local dataset against the ASF catalogue (granules still published, same MD5)
+         and lists newer passes on the main track
+  python pipeline/search_nisar.py --aoi manaus --download --n 3
+      -> legacy: downloads whole GCOV files (2–13 GB each) for 3 dates of the main track
 """
 import argparse
 import json

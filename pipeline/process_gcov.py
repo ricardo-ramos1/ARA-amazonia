@@ -8,7 +8,8 @@ Two stages:
        (frequencyB, 80 m — ~1/20 of the bytes of the 20 m band; frequencyA block-averaged to 80 m when B is absent)
     2. average LINEAR power onto the ~100 m WGS84 grid (multilooking), frames of one pass mosaicked, dB
     3. trim the noisy swath edges of each pass
-    4. main pass first; holes filled by the filler pass (band 3 records which one)
+    4. main pass first; holes filled by the planned filler passes, then by reserve passes while the measured
+       coverage is below TARGET_COVERAGE (band 3 records the source pass of every pixel: 1 = main, 2.. = fillers)
     -> ~/spaceapps_data/nisar/<aoi>/<date>_100m.tif (int16 dB×10: HH, HV, source) + manifest.json (granules, md5, bytes read)
 
   classify (always, from the local dataset)
@@ -244,7 +245,7 @@ def water_threshold(hh, fallback: float | None = None) -> float:
     return float(np.clip(v, *WATER_DB_RANGE))
 
 
-def overlay_png(hh_db, cls, path: Path):
+def overlay_image(hh_db, cls, path: Path):
     """Map overlay over the whole wide grid, so every date is the same rectangle:
     classes in strong colors; dry land as a dim, semi-transparent backscatter texture (context, not the message);
     pixels no pass covered as faint diagonal hatching ("no radar coverage"), not a transparent hole."""
@@ -296,7 +297,7 @@ def classify(aoi_key: str, aoi: dict, man: dict) -> None:
             cls[(cls == 2) & (built >= URBAN_FRAC)] = 3
         valid = np.isfinite(hh)
         png = WEB_DATA / "sar" / f"{aoi_key}_{date}.webp"
-        overlay_png(hh, cls, png)
+        overlay_image(hh, cls, png)
 
         frac = {}
         for k, c in (("water", 1), ("flooded", 2)):

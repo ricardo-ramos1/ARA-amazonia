@@ -35,12 +35,12 @@ Every view leads with **the people affected** — living by the water, near fire
 
 ## The four views
 
-| View | Map | Charts |
-|---|---|---|
-| 💧 **Rivers** | NISAR radar (open water, flooded forest, urban), Sentinel-2 optical, 3D population living by the water | ONI × Rio Negro level; river and rainfall forecasts |
-| 🔥 **Fire** | fires in the 60 days before each radar date, radar burn scars (ΔHV), 3D population near fire | fires per year in Amazonas; fire forecast |
-| 📡 **Fire now** | cards for the largest active clusters (click to fly there), 48 h fires colored by risk, wind arrows (+0 to +69 h), smoke sectors, people in the smoke path | 72 h Angström index, wind and rain |
-| ⚡ **Energy** | cards for 5 hydropower plants (inflow vs. normal, output; click for charts), solar potential relief map, plant columns (height = capacity, color = inflow vs. normal) | water × power per plant; dry-season output year by year; sun × smoke |
+| View | Headline (people) | Map | El Niño card | Evidence cards (click to open) |
+|---|---|---|---|---|
+| 💧 **Rivers** | people living by the water on the selected radar date | NISAR radar (open water, flooded forest, urban; gaps hatched), Sentinel-2 optical, 3D population | *clear in strong events* | ONI × Rio Negro level; river and rainfall forecasts |
+| 🔥 **Fire** | people within 3 km of a fire in the 60 days before the date | fires, radar burn scars (ΔHV), 3D population near fire | *indirect* | fire forecast; fires per year in Amazonas |
+| 📡 **Fire now** | people in the smoke path now | cards for the largest active clusters (click to fly there), fires colored by risk, wind arrows (+0 to +69 h), smoke sectors | — | 72 h Angström index, wind and rain |
+| ⚡ **Energy** | people in the region who depend on the river for power and fuel | cards for 5 hydropower plants (click for charts), solar relief map, plant columns (height = capacity, color = inflow vs. normal) | *strong* | water × power per plant; dry-season output year by year; sun × smoke |
 
 **Fire now** is a same-day snapshot: re-run it to refresh. It is not a validated model or an official warning.
 - **Fires:** FIRMS near-real-time, VIIRS (375 m, catches more small fires) and MODIS.
@@ -73,8 +73,13 @@ model/
   fire_modulation.py        how much El Niño and low rivers push fire above its recent level
   energy_analysis.py        water → power at each plant, sun × smoke, and severe-drought risk for diesel supply
 web/                        Vite + deck.gl + MapLibre + Chart.js app
+  index.html                layout: people headline, El Niño cards, evidence cards, story card, glossary
+  src/main.js               map layers, panels, story mode, definition balloons
+  src/glossary.js           the 37 glossary entries (plain-language definitions)
+  src/style.css             styles (desktop and phone)
   public/data/              JSON and WebP produced by the pipeline (served as data/)
   Dockerfile, nginx.conf    site image (Node build → nginx)
+.github/workflows/pages.yml builds web/ and publishes it to GitHub Pages on every push that changes web/
 docker-compose.yml          publishes the site; --profile https adds Caddy for the domain's HTTPS
 deploy/Caddyfile            HTTPS reverse proxy (domain from the DOMAIN variable)
 ```
@@ -136,7 +141,11 @@ npm install
 npm run dev
 ```
 
-### 5. Publish to a domain (Docker)
+### 5. Publish
+
+**GitHub Pages (the live demo).** `.github/workflows/pages.yml` builds `web/` and publishes it to https://ricardo-ramos1.github.io/pulsar-amazonia/ whenever a push to `main` changes `web/`. One-time setup: repository *Settings → Pages → Source: GitHub Actions*. To refresh the data online, re-run the pipeline locally and push.
+
+**Your own domain (Docker).**
 
 The site is static: the pipeline output in `web/public/data` is baked into the image. `docker-compose.yml` builds the app (Node) and serves it with nginx. The server needs no database, no keys and no Python.
 
@@ -186,13 +195,14 @@ The live data is a snapshot of the last pipeline run. "Fire now" in particular o
 - **Radar (19 dates, study area ± 1°):** from June to November 2026, in the Manaus region, open water fell 26% (7,259 → 5,396 km²), flooded forest fell 97% (6,041 → 158 km²), and the people living by the water fell from 194,000 to 112,000. In Tefé, from August to October (same coverage), flooded forest fell 98% (4,044 → 82 km²).
 - **Sentinel-2 validation (whole area):** F1 0.89 in Manaus (8 of 10 dates reliable) and 0.84 in Tefé (8 of 9). Within the original study area, F1 0.91 and 0.94. A date only counts if the optical image sees at least 70% of the permanent river (WorldCover) as water. Haze or smoke covered Manaus on Oct 21 and Nov 2, and Tefé on Oct 23.
 - **Tefé caveat (Jun–Jul):** on those dates, frame 175 of the main track only came as frequencyA in `DHNA` mode, and its content is fill (~−54 dB). Those pixels are discarded (below −40 dB), so coverage drops to 60–72% even with four filler passes.
-- **River model:** 3 months ahead, skill +0.25 over climatology, also beating persistence. Forecast for Nov 2026: 17.2 m (normal: 18.7 m).
+- **El Niño × La Niña:** comparing the Sep–Nov minimum at Manaus with the preceding Dec–Feb ONI (1951–2026, 76 years), the river bottoms out at **16.4 m after strong El Niños** (ONI ≥ 1.0, 10 years), 17.5 m in neutral years (26) and **19.4 m after strong La Niñas** (≤ −1.0, 9 years): about 3 m apart. Year by year the correlation is modest (Spearman −0.24), because weak events and the tropical Atlantic (as in 2023) also matter. Hence the label *clear in strong events*.
+- **River model:** 3 months ahead, skill +0.25 over climatology, also beating persistence; ENSO is its second driver after the river's own memory. Forecast for Nov 2026: 17.2 m (normal: 18.7 m).
 
 ## Results: wildfire
 
 - **Data:** MODIS fires (NASA FIRMS), 2000 to Nov 2026, within Amazonas state (IBGE boundary). Vegetation fires only, confidence ≥ 30. The standard product is used up to Aug 2026, then near-real-time data (API, with `FIRMS_MAP_KEY`). Only MODIS is used, so the series stays consistent (VIIRS starts in 2012); the Terra/Aqua split is unchanged in 2026.
 - **A human baseline:** the Aug–Oct season went from about 10,000 fires (2000–2015) to 20,000–34,000 (2021–2024; the record was 2024). That makes "same as the previous 3 years" the hardest baseline to beat: skill +0.25, vs. +0.16 for the ML model.
-- **Climate modulation** relative to the recent level (24 seasons): **low river at Manaus (minimum < 16.3 m) +39%**, other years −10%. The El Niño effect on its own is nearly zero (+1%). 2026 has the strongest El Niño on record (ONI 2.14), yet the river only fell to 16.45 m and state-wide fire stayed at 0.55× the recent level. **What matters is drought that reaches the river, not the Pacific index alone.**
+- **Climate modulation** relative to the recent level (24 seasons): **low river at Manaus (minimum < 16.3 m) +39%**, other years −10%. The El Niño effect on its own is nearly zero (+1%). 2026 has a very strong El Niño (Jul–Sep ONI 2.14), yet the river only fell to 16.45 m and state-wide fire stayed at 0.55× the recent level. **What matters is drought that reaches the river, not the Pacific index alone.**
 - **2026 around Manaus:** 3,500 fires, the second-highest year on record (after 2023).
 - **Radar × fire:** across the wide Manaus area, the forest HV drop between Jun 23 and Nov 2, 2026 reveals **222 patches (34 km²)**. Only pixels seen by the main track on both dates are compared. **204 of them (92%) have a FIRMS fire within about 1.7 km, vs. 12% of randomly sampled forest points.** NISAR is seeing burn scars. Patches without a fire may be deforestation or understory fire. No patches appeared around Tefé (66 fires in the period).
 
