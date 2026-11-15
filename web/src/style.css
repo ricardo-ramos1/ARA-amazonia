@@ -285,3 +285,12 @@ dialog.glossary::backdrop { background: rgba(2, 6, 12, .6); backdrop-filter: blu
   dialog.glossary[open] { animation: slide-in .22s ease-out; }
 }
 @keyframes slide-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* glossary inside the story card */
+.story-card .story-step { display: flex; justify-content: space-between; align-items: center; padding-right: 26px; }
+.story-gloss { border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 3px 9px; background: transparent;
+  color: var(--fg); font: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; cursor: pointer; }
+.story-gloss:hover { background: rgba(255,255,255,.08); }
+.story-card .term { text-decoration-color: rgba(251, 191, 36, .6); }
+/* the glossary opens above the story card */
+dialog.glossary { z-index: 20; }

@@ -797,9 +797,9 @@ const STORY = [
     go: () => { setScene(0); setMode('rios'); },
     text: () => {
       const s0 = state.sar.scenes[0];
-      return `${s0.date.slice(0, 7)}: the Rio Negro is near its yearly peak. NISAR's L-band radar sees through clouds and
-        under the canopy: <b>${fmt(s0.flooded_forest_km2)} km²</b> of forest standing in water around Manaus.
-        <b>${k(s0.pop_near_water)} people</b> live right by that water.`;
+      return `${s0.date.slice(0, 7)}: the Rio Negro is near its yearly peak. <span class="term" data-term="NISAR">NISAR</span>'s <span class="term" data-term="L-band">L-band radar</span> sees through clouds and
+        under the canopy: <b>${fmt(s0.flooded_forest_km2)} km²</b> of <span class="term" data-term="Flooded forest">forest standing in water</span> around Manaus.
+        <b>${k(s0.pop_near_water)} people</b> live <span class="term" data-term="people by the water">right by that water</span>.`;
     },
   },
   {
@@ -807,10 +807,10 @@ const STORY = [
     go: () => { setScene(state.sar.scenes.length - 1); setMode('rios'); },
     text: () => {
       const s0 = state.sar.scenes[0]; const sL = state.sar.scenes.at(-1); const v = state.oni.oni.at(-1);
-      return `${sL.date.slice(0, 7)}, under a very strong El Niño (ONI +${fmt(v, 2)} °C): the flooded forest shrank
+      return `${sL.date.slice(0, 7)}, under a very strong <span class="term" data-term="El Niño">El Niño</span> (<span class="term" data-term="ONI">ONI</span> +${fmt(v, 2)} °C): the flooded forest shrank
         <b>${pct(1 - sL.flooded_forest_km2 / s0.flooded_forest_km2)}</b>. People living by the water fell from
         ${k(s0.pop_near_water)} to <b>${k(sL.pop_near_water)}</b> — the river moved away from their doors.
-        Over 76 years, the river bottoms out ~3 m lower after strong El Niños than after strong La Niñas.`;
+        Over 76 years, the <span class="term" data-term="river gauge">river</span> bottoms out ~3 m lower after strong El Niños than after strong La Niñas.`;
     },
   },
   {
@@ -826,8 +826,8 @@ const STORY = [
     text: () => {
       const sc = state.scars;
       return `Dry forest burns. In the 60 days before ${currentScene().date}, <b>${k(peopleNearFire())} people</b> lived
-        within ${FIRE_NEAR_KM} km of a fire. The radar found <b>${sc?.n_patches ?? 0} burn scars</b> —
-        ${pct(sc?.confirm_rate ?? 0)} confirmed by fire satellites (only ${pct(sc?.control_rate_random_forest ?? 0)} by chance).
+        within ${FIRE_NEAR_KM} km of a fire. The radar found <b>${sc?.n_patches ?? 0} <span class="term" data-term="burn scars">burn scars</span></b> —
+        ${pct(sc?.confirm_rate ?? 0)} confirmed by <span class="term" data-term="FIRMS">fire satellites</span> (only ${pct(sc?.control_rate_random_forest ?? 0)} by chance).
         El Niño alone doesn't explain fire; drought reaching the river does (+39%).`;
     },
   },
@@ -840,7 +840,7 @@ const STORY = [
     },
     text: () => {
       const nw = state.now;
-      return nw ? `Right now (${nw.generated_local}): <b>${k(nw.people_downwind)} people</b> are in the smoke path of
+      return nw ? `Right now (${nw.generated_local}): <b>${k(nw.people_downwind)} people</b> are in the <span class="term" data-term="smoke path">smoke path</span> of
         ${fmt(nw.n_fires)} fires. Slide the forecast hour to see where the wind takes it over the next 72 h.` : 'No nowcast available.';
     },
   },
@@ -850,8 +850,8 @@ const STORY = [
     text: () => {
       const b = state.energy?.plants.find((p) => p.name === 'Balbina');
       return `<b>${k(state.popWide?.total ?? 0)} people</b> in this region depend on the river for power and fuel.
-        Balbina, the reservoir that serves Manaus, gets <b>${pct(b?.last.inflow_pct ?? 0)}</b> of its normal water —
-        its inflow falls with El Niño (ρ = −0.68). When the river is low, diesel barges can't reach isolated towns.`;
+        Balbina, the <span class="term" data-term="reservoir">reservoir</span> that serves Manaus, gets <b>${pct(b?.last.inflow_pct ?? 0)}</b> of its normal water —
+        its <span class="term" data-term="inflow">inflow</span> falls with El Niño (<span class="term" data-term="Spearman">ρ = −0.68</span>). When the river is low, <span class="term" data-term="diesel">diesel barges</span> can't reach isolated towns.`;
     },
   },
 ];
@@ -866,7 +866,8 @@ async function storyGo(i) {
   STORY[i].go();
   const last = i === STORY.length - 1;
   box.innerHTML = `<button class="pick-x" aria-label="Close story">×</button>
-    <div class="story-step">Step ${i + 1} of ${STORY.length}</div>
+    <div class="story-step">Step ${i + 1} of ${STORY.length}
+      <button class="story-gloss" data-glossary title="Doubts about a term? Open the glossary">📖 Glossary</button></div>
     <h3>${STORY[i].title}</h3>
     <p>${STORY[i].text()}</p>
     <div class="story-nav">
@@ -876,6 +877,7 @@ async function storyGo(i) {
     </div>`;
   box.hidden = false;
   box.querySelector('.pick-x').onclick = () => storyGo(-1);
+  box.querySelector('[data-glossary]').onclick = () => openGlossary();
   box.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => storyGo(+b.dataset.go); });
 }
 
@@ -1024,7 +1026,7 @@ async function init() {
     openGlossary(t.dataset.term);
   });
   document.addEventListener('keydown', (e) => {
-    if (state.story == null) return;
+    if (state.story == null || $('glossary').open) return; // Esc / arrows belong to the glossary while it is open
     if (e.key === 'ArrowRight') storyGo(state.story + 1 < STORY.length ? state.story + 1 : state.story);
     if (e.key === 'ArrowLeft') storyGo(Math.max(0, state.story - 1));
     if (e.key === 'Escape') storyGo(-1);
