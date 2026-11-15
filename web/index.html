@@ -53,11 +53,11 @@
     </header>
     <div class="chip-row">
       <div id="enso-now" class="enso-chip"></div>
-      <span class="chip-btns">
-        <button id="glossary-btn" class="ghost-btn" title="What do these terms mean?">📖 Glossary</button>
-        <button id="story-btn" class="story-btn">▶ Tell me the story</button>
-      </span>
     </div>
+    <button id="story-btn" class="story-cta">
+      <span class="cta-main">▶ Tell me the story</span>
+      <span class="cta-sub">5 steps · 2 minutes · start here</span>
+    </button>
 
     <!-- the people affected: the headline of every view -->
     <div id="hero" class="hero"></div>
@@ -175,7 +175,11 @@
 
   <!-- evidence: one chart at a time, opened on click -->
   <aside id="charts">
-    <h2 class="ev-title">The evidence <span class="muted">click to open</span></h2>
+    <div class="ev-title">
+      <h2>The evidence</h2>
+      <button id="glossary-btn" class="ghost-btn" title="What do these terms mean?">📖 Glossary</button>
+    </div>
+    <p class="muted ev-hint">Click a card to open its chart · dotted words open the glossary</p>
 
     <!-- RIVERS -->
     <details class="chart-card only-rios" name="evidence">

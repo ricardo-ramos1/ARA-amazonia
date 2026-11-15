@@ -264,3 +264,24 @@ dialog.glossary::backdrop { background: rgba(2, 6, 12, .6); backdrop-filter: blu
   .chip-btns { width: 100%; }
   .chip-btns button { flex: 1; }
 }
+
+/* ================================================================ story CTA + glossary on the right */
+.story-cta { display: flex; flex-direction: column; align-items: flex-start; width: 100%; margin-top: 12px; padding: 11px 14px;
+  border: 0; border-radius: 12px; cursor: pointer; text-align: left; font: inherit; color: #111;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b); box-shadow: 0 6px 20px rgba(245, 158, 11, .28);
+  animation: pulse 2.4s ease-out 3; transition: transform .15s, box-shadow .15s; }
+.story-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(245, 158, 11, .4); }
+.story-cta .cta-main { font-size: 16px; font-weight: 800; }
+.story-cta .cta-sub { font-size: 12px; font-weight: 600; opacity: .75; margin-top: 2px; }
+
+.ev-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ev-title h2 { margin: 0; }
+.ev-hint { margin: 6px 0 2px; }
+
+/* glossary as a drawer sliding in from the right (desktop / tablet) */
+@media (min-width: 901px) {
+  dialog.glossary { margin: 0 0 0 auto; width: min(440px, 100vw); height: 100vh; max-height: 100vh;
+    border-radius: 14px 0 0 14px; border-right: 0; }
+  dialog.glossary[open] { animation: slide-in .22s ease-out; }
+}
+@keyframes slide-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
