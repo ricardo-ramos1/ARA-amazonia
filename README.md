@@ -23,10 +23,15 @@ Machine-learning models forecast river level, rainfall and fire activity 1, 3 an
 |---|---|
 | 🛰️ **19 NISAR dates** (Jun–Nov 2026) | Manaus and Tefé, each over ~90,000 km², read remotely without downloading full files |
 | ✓ **Radar water validated** against Sentinel-2 | F1 **0.89** (Manaus) and **0.84** (Tefé) across the whole area |
-| 🌊 **Flooded forest −98%** | Manaus region, Jun → Nov 2026: the floodplain drained as El Niño set in |
+| 👥 **People by the water: 194k → 112k** | Manaus region, Jun → Nov 2026: as El Niño set in, the river retreated from people's doors and 97% of the flooded forest drained |
+| 🌡️ **~3 m** | the Rio Negro bottoms out at 16.4 m after strong El Niños vs. 19.4 m after strong La Niñas (1951–2026) |
 | 🔥 **222 burn scars** detected by radar | **92%** have a FIRMS fire nearby, vs. 12% for random forest points |
 | 📈 **River forecast** 3 months ahead | skill **+0.25** over climatology; beats persistence |
 | ⚡ **Hydropower in drought** | Belo Monte, Santo Antônio and Jirau generated **54%** of normal in the 2024 drought |
+
+## How to read it
+
+Every view leads with **the people affected** — living by the water, near fires, in the smoke path, or depending on the river for power and fuel. **El Niño** is the second thread, shown only where our results support it and labelled by strength of evidence: *clear in strong events* (river level), *strong* (Balbina inflow) or *indirect* (fire, through drought that reaches the river). Charts are tucked into **evidence cards** that open on click; clicking a population column on the map shows who lives in that km². **▶ Tell me the story** runs a five-step guided tour — the pulse, the drought, the fire, the smoke today, the power — that doubles as the pitch script.
 
 ## The four views
 
@@ -178,7 +183,7 @@ The live data is a snapshot of the last pipeline run. "Fire now" in particular o
 
 ## Results: rivers
 
-- **Radar (19 dates, study area ± 1°):** from June to November 2026, in the Manaus region, open water fell 27% (7,259 → 5,327 km²) and flooded forest fell 98% (6,041 → 113 km²). In Tefé, from August to October (same coverage), flooded forest fell 98% (3,828 → 77 km²).
+- **Radar (19 dates, study area ± 1°):** from June to November 2026, in the Manaus region, open water fell 26% (7,259 → 5,396 km²), flooded forest fell 97% (6,041 → 158 km²), and the people living by the water fell from 194,000 to 112,000. In Tefé, from August to October (same coverage), flooded forest fell 98% (4,044 → 82 km²).
 - **Sentinel-2 validation (whole area):** F1 0.89 in Manaus (8 of 10 dates reliable) and 0.84 in Tefé (8 of 9). Within the original study area, F1 0.91 and 0.94. A date only counts if the optical image sees at least 70% of the permanent river (WorldCover) as water. Haze or smoke covered Manaus on Oct 21 and Nov 2, and Tefé on Oct 23.
 - **Tefé caveat (Jun–Jul):** on those dates, frame 175 of the main track only came as frequencyA in `DHNA` mode, and its content is fill (~−54 dB). Those pixels are discarded (below −40 dB), so coverage drops to 60–72% even with four filler passes.
 - **River model:** 3 months ahead, skill +0.25 over climatology, also beating persistence. Forecast for Nov 2026: 17.2 m (normal: 18.7 m).
@@ -220,4 +225,4 @@ The live data is a snapshot of the last pipeline run. "Fire now" in particular o
 - [ ] More cities with the same setup (Parintins, Coari, Tabatinga), about 30 min of processing each
 - [ ] Long Sentinel-1 series (2015 →) to cover the 2015 and 2023 El Niños
 - [ ] Interferometry (GUNW) for ground deformation
-- [ ] A "story" mode that follows the presentation script
+- [x] A five-step "story" mode that follows the presentation script

@@ -398,8 +398,7 @@ function updateHero() {
       ? `On ${sc.date} the radar sees ${fmt(sc.water_km2)} km² of open water and ${fmt(sc.flooded_forest_km2)} km² of flooded forest around them. Drag the date to watch the river fall.`
       : `On ${sc.date}: ${fmt(sc.flooded_forest_km2)} km² of flooded forest left — ${pct(1 - sc.flooded_forest_km2 / first.flooded_forest_km2)} less than in ${first.date.slice(0, 7)}.`;
   } else if (state.mode === 'fogo' && sc) {
-    const near = state.nearFire && state.popWide
-      ? state.popWide.cells.reduce((s, c, i) => s + (state.nearFire[i] ? c[2] : 0), 0) : 0;
+    const near = peopleNearFire();
     big = k(near); label = `people within ${FIRE_NEAR_KM} km of a fire`;
     const s = state.scars;
     story = s?.n_patches
@@ -747,6 +746,105 @@ function solarChart() {
     <span class="info" title="Smokiest Aug–Oct months (top quartile of AOD anomaly) vs. the cleanest, over ${s.n_months} months: ${fmt(s.loss_per_0_1_aod_pct, 1)}% less sun per +0.1 AOD (correlation ${fmt(s.corr_ghi_aod, 2)}). Clouds also vary with smoke, so this is an association, not an isolated measurement of the effect.">ⓘ</span>`;
 }
 
+// ---------------------------------------------------------------- story mode: a guided tour, people first
+function peopleNearFire() {
+  return state.nearFire && state.popWide
+    ? state.popWide.cells.reduce((s, c, i) => s + (state.nearFire[i] ? c[2] : 0), 0) : 0;
+}
+
+function setScene(i) {
+  state.idx = i; state.idxTouched = true;
+  recomputeNearFire(); updateTimeline(); loadSceneImages();
+}
+
+const STORY = [
+  {
+    title: 'The pulse',
+    go: () => { setScene(0); setMode('rios'); },
+    text: () => {
+      const s0 = state.sar.scenes[0];
+      return `${s0.date.slice(0, 7)}: the Rio Negro is near its yearly peak. NISAR's L-band radar sees through clouds and
+        under the canopy: <b>${fmt(s0.flooded_forest_km2)} km²</b> of forest standing in water around Manaus.
+        <b>${k(s0.pop_near_water)} people</b> live right by that water.`;
+    },
+  },
+  {
+    title: 'The drought',
+    go: () => { setScene(state.sar.scenes.length - 1); setMode('rios'); },
+    text: () => {
+      const s0 = state.sar.scenes[0]; const sL = state.sar.scenes.at(-1); const v = state.oni.oni.at(-1);
+      return `${sL.date.slice(0, 7)}, under a very strong El Niño (ONI +${fmt(v, 2)} °C): the flooded forest shrank
+        <b>${pct(1 - sL.flooded_forest_km2 / s0.flooded_forest_km2)}</b>. People living by the water fell from
+        ${k(s0.pop_near_water)} to <b>${k(sL.pop_near_water)}</b> — the river moved away from their doors.
+        Over 76 years, the river bottoms out ~3 m lower after strong El Niños than after strong La Niñas.`;
+    },
+  },
+  {
+    title: 'The fire',
+    go: () => {
+      setScene(state.sar.scenes.length - 1); setMode('fogo');
+      const top = [...(state.scars?.patches ?? [])].sort((a, b) => b.km2 - a.km2).slice(0, 20);
+      if (top.length) {
+        const lon = top.reduce((a, p) => a + p.lon, 0) / top.length; const lat = top.reduce((a, p) => a + p.lat, 0) / top.length;
+        map.flyTo({ center: [lon, lat], zoom: 8.6, pitch: 50, bearing: -15, duration: 1600 });
+      }
+    },
+    text: () => {
+      const sc = state.scars;
+      return `Dry forest burns. In the 60 days before ${currentScene().date}, <b>${k(peopleNearFire())} people</b> lived
+        within ${FIRE_NEAR_KM} km of a fire. The radar found <b>${sc?.n_patches ?? 0} burn scars</b> —
+        ${pct(sc?.confirm_rate ?? 0)} confirmed by fire satellites (only ${pct(sc?.control_rate_random_forest ?? 0)} by chance).
+        El Niño alone doesn't explain fire; drought reaching the river does (+39%).`;
+    },
+  },
+  {
+    title: 'The smoke, today',
+    go: () => {
+      setMode('agora');
+      const c = state.now?.clusters?.[0];
+      if (c) map.flyTo({ center: [c.lon, c.lat], zoom: 9.2, pitch: 50, bearing: -15, duration: 1600 });
+    },
+    text: () => {
+      const nw = state.now;
+      return nw ? `Right now (${nw.generated_local}): <b>${k(nw.people_downwind)} people</b> are in the smoke path of
+        ${fmt(nw.n_fires)} fires. Slide the forecast hour to see where the wind takes it over the next 72 h.` : 'No nowcast available.';
+    },
+  },
+  {
+    title: 'The power',
+    go: () => { setMode('energia'); selectPlant('Balbina', true); },
+    text: () => {
+      const b = state.energy?.plants.find((p) => p.name === 'Balbina');
+      return `<b>${k(state.popWide?.total ?? 0)} people</b> in this region depend on the river for power and fuel.
+        Balbina, the reservoir that serves Manaus, gets <b>${pct(b?.last.inflow_pct ?? 0)}</b> of its normal water —
+        its inflow falls with El Niño (ρ = −0.68). When the river is low, diesel barges can't reach isolated towns.`;
+    },
+  },
+];
+
+async function storyGo(i) {
+  const box = $('story-card');
+  if (i < 0 || i >= STORY.length) { box.hidden = true; state.story = null; return; }
+  if (state.aoi !== 'manaus') { $('aoi').value = 'manaus'; await selectAoi('manaus'); }
+  state.story = i;
+  $('pick').hidden = true;
+  if (innerWidth < 900) { document.body.scrollTo?.({ top: 0, behavior: 'smooth' }); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  STORY[i].go();
+  const last = i === STORY.length - 1;
+  box.innerHTML = `<button class="pick-x" aria-label="Close story">×</button>
+    <div class="story-step">Step ${i + 1} of ${STORY.length}</div>
+    <h3>${STORY[i].title}</h3>
+    <p>${STORY[i].text()}</p>
+    <div class="story-nav">
+      <button class="ghost" ${i === 0 ? 'disabled' : ''} data-go="${i - 1}">◀ Back</button>
+      <span class="dots">${STORY.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</span>
+      <button class="primary" data-go="${last ? -1 : i + 1}">${last ? 'Explore on your own' : 'Next ▶'}</button>
+    </div>`;
+  box.hidden = false;
+  box.querySelector('.pick-x').onclick = () => storyGo(-1);
+  box.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => storyGo(+b.dataset.go); });
+}
+
 // ---------------------------------------------------------------- modes & AOI
 function setMode(mode) {
   if (!MODES.includes(mode)) mode = 'rios';
@@ -879,6 +977,13 @@ async function init() {
     d.addEventListener('toggle', () => { if (d.open) Object.values(charts).forEach((c) => c?.resize()); });
   });
   window.addEventListener('hashchange', () => setMode(modeFromHash(location.hash.slice(1))));
+  $('story-btn').onclick = () => storyGo(0);
+  document.addEventListener('keydown', (e) => {
+    if (state.story == null) return;
+    if (e.key === 'ArrowRight') storyGo(state.story + 1 < STORY.length ? state.story + 1 : state.story);
+    if (e.key === 'ArrowLeft') storyGo(Math.max(0, state.story - 1));
+    if (e.key === 'Escape') storyGo(-1);
+  });
   state.mode = modeFromHash(location.hash.slice(1)) ?? 'rios';
   await selectAoi(Object.keys(aois)[0]);
 }

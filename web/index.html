@@ -24,6 +24,9 @@
   <!-- card pinned by clicking a population column on the map -->
   <div id="pick" class="pick" hidden></div>
 
+  <!-- story mode: a guided tour through the five chapters -->
+  <div id="story-card" class="story-card" hidden></div>
+
   <!-- feature dock: the things the user acts on get their own place, over the map -->
   <section id="dock" class="only-agora only-energia" aria-label="Highlights">
     <div class="dock-head">
@@ -38,7 +41,10 @@
       <h1>PulSAR</h1>
       <select id="aoi" aria-label="Study area"></select>
     </header>
-    <div id="enso-now" class="enso-chip"></div>
+    <div class="chip-row">
+      <div id="enso-now" class="enso-chip"></div>
+      <button id="story-btn" class="story-btn">▶ Tell me the story</button>
+    </div>
 
     <!-- the people affected: the headline of every view -->
     <div id="hero" class="hero"></div>

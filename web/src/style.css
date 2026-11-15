@@ -197,3 +197,36 @@ details.chart-card .row select { margin: 0; }
   .pick { position: fixed; top: auto; bottom: 16px; }
   .hero-big { font-size: 34px; }
 }
+
+/* ================================================================ story mode */
+.chip-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.chip-row .enso-chip { margin-top: 0; }
+.story-btn { border: 0; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  background: #fbbf24; color: #111; box-shadow: 0 0 0 0 rgba(251,191,36,.6); animation: pulse 2.4s ease-out 3; }
+.story-btn:hover { background: #fcd34d; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(251,191,36,.55); } 100% { box-shadow: 0 0 0 12px rgba(251,191,36,0); } }
+
+.story-card { position: absolute; z-index: 7; left: 372px; right: 452px; top: 72px; margin: 0 auto; max-width: 560px;
+  background: rgba(10, 15, 24, .94); backdrop-filter: blur(8px); border: 1px solid rgba(251,191,36,.55); border-radius: 14px;
+  padding: 14px 18px 12px; box-shadow: 0 10px 34px rgba(0,0,0,.55); }
+.story-card .story-step { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #fbbf24; font-weight: 700; }
+.story-card h3 { margin: 2px 0 6px; font-size: 20px; }
+.story-card p { margin: 0; font-size: 14px; line-height: 1.55; color: #d6dee8; }
+.story-card p b { color: #fbbf24; }
+.story-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 8px; }
+.story-nav button { border-radius: 8px; padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid rgba(255,255,255,.15); }
+.story-nav .primary { background: #fbbf24; color: #111; border-color: #fbbf24; font-weight: 700; }
+.story-nav .ghost { background: transparent; color: var(--fg); }
+.story-nav button:disabled { opacity: .35; cursor: default; }
+.dots { display: flex; gap: 6px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.2); }
+.dots i.on { background: #fbbf24; }
+
+@media (max-width: 1100px) {
+  .story-card { left: 16px; right: 16px; top: 16px; }
+}
+@media (max-width: 900px) {
+  .story-card { position: fixed; left: 8px; right: 8px; top: auto; bottom: 8px; max-width: none; }
+  .story-card h3 { font-size: 17px; }
+  .story-card p { font-size: 13px; }
+}
