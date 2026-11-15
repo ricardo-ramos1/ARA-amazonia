@@ -762,13 +762,39 @@ function renderGlossary(q = '') {
     : '<p class="muted">No term found.</p>';
 }
 
+function findTerm(term) {
+  const nt = term ? norm(term) : '';
+  return nt ? gEntries.find((x) => x.keys.includes(nt)) ?? gEntries.find((x) => x.keys.some((k) => k.startsWith(nt))) : null;
+}
+
+// click a technical word: a small balloon with its definition, right next to the word
+function showTermPop(el, term) {
+  const pop = $('term-pop');
+  const e = findTerm(term);
+  if (!e) { openGlossary(term); return; }
+  pop.innerHTML = `<div class="tp-term">${e.term}</div><div class="tp-def">${e.def}</div>
+    <button class="tp-more" type="button">📖 Open glossary</button>`;
+  pop.hidden = false;
+  pop.querySelector('.tp-more').onclick = () => { pop.hidden = true; openGlossary(term); };
+  // place below the word (above it if there is no room), kept inside the viewport
+  const r = el.getBoundingClientRect();
+  const w = Math.min(300, innerWidth - 16);
+  pop.style.width = `${w}px`;
+  const left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+  const h = pop.offsetHeight;
+  const below = r.bottom + 8 + h < innerHeight;
+  pop.style.left = `${left}px`;
+  pop.style.top = `${below ? r.bottom + 8 : Math.max(8, r.top - h - 8)}px`;
+  pop.dataset.anchor = term;
+}
+
 function openGlossary(term) {
+  $('term-pop').hidden = true;
   const dlg = $('glossary');
   $('g-search').value = '';
   renderGlossary();
   if (!dlg.open) dlg.showModal();
-  const nt = term ? norm(term) : '';
-  const e = nt && (gEntries.find((x) => x.keys.includes(nt)) ?? gEntries.find((x) => x.keys.some((k) => k.startsWith(nt))));
+  const e = findTerm(term);
   if (e) {
     const el = document.getElementById(e.id);
     el.classList.add('flash');
@@ -1018,15 +1044,24 @@ async function init() {
   $('g-close').onclick = () => $('glossary').close();
   $('g-search').oninput = (e) => renderGlossary(e.target.value);
   $('glossary').addEventListener('click', (e) => { if (e.target === $('glossary')) $('glossary').close(); }); // backdrop
-  // any underlined term (static or generated text) opens its glossary entry
+  // any underlined term (static or generated text) shows its definition in a balloon; the balloon links to the glossary
   document.addEventListener('click', (e) => {
+    const pop = $('term-pop');
+    if (e.target.closest('#term-pop')) return;
     const t = e.target.closest('[data-term]');
-    if (!t || t.closest('#glossary')) return;
+    if (!t || t.closest('#glossary')) { pop.hidden = true; return; }
     e.preventDefault();
-    openGlossary(t.dataset.term);
+    e.stopPropagation();
+    if (!pop.hidden && pop.dataset.anchor === t.dataset.term) { pop.hidden = true; return; } // second click closes
+    showTermPop(t, t.dataset.term);
+  }, true);
+  document.addEventListener('keydown', (e) => { // Esc closes an open balloon first (and nothing else)
+    if (e.key === 'Escape' && !$('term-pop').hidden) { $('term-pop').hidden = true; e.stopImmediatePropagation(); }
   });
+  addEventListener('scroll', () => { $('term-pop').hidden = true; }, true);
+  addEventListener('resize', () => { $('term-pop').hidden = true; });
   document.addEventListener('keydown', (e) => {
-    if (state.story == null || $('glossary').open) return; // Esc / arrows belong to the glossary while it is open
+    if (state.story == null || $('glossary').open || !$('term-pop').hidden) return; // Esc / arrows belong to the glossary while it is open
     if (e.key === 'ArrowRight') storyGo(state.story + 1 < STORY.length ? state.story + 1 : state.story);
     if (e.key === 'ArrowLeft') storyGo(Math.max(0, state.story - 1));
     if (e.key === 'Escape') storyGo(-1);
