@@ -4,7 +4,8 @@
 
 > **Pul**se of the waters + **SAR** radar: the NISAR radar sees the Amazon breathe through the clouds — water, fire and energy.
 
-🌐 **Live demo:** https://ricardo-ramos1.github.io/pulsar-amazonia/
+🌐 **Live demo:** https://ricardo-ramos1.github.io/pulsar-amazonia/  
+🎬 **Project demo (7 slides):** https://ricardo-ramos1.github.io/pulsar-amazonia/pitch/ · [PDF](https://ricardo-ramos1.github.io/pulsar-amazonia/pitch/PulSAR-demo.pdf)
 
 Every year the Amazon's rivers rise and fall by more than ten meters. El Niño can turn that rhythm into extreme drought, wildfire and power shortages for millions of people. This project follows that pulse with **NISAR**, the NASA-ISRO L-band radar that sees through clouds and even detects water **beneath the forest canopy**.
 
@@ -78,8 +79,10 @@ web/                        Vite + deck.gl + MapLibre + Chart.js app
   src/glossary.js           the 37 glossary entries (plain-language definitions)
   src/style.css             styles (desktop and phone)
   public/data/              JSON and WebP produced by the pipeline (served as data/)
+  public/pitch/             the 7-slide project demo (HTML; ←/→ to navigate) and its PDF
   Dockerfile, nginx.conf    site image (Node build → nginx)
 .github/workflows/pages.yml builds web/ and publishes it to GitHub Pages on every push that changes web/
+scripts/export_pitch.py     re-exports the demo slides to PNG/PDF with headless Edge/Chrome
 docker-compose.yml          publishes the site; --profile https adds Caddy for the domain's HTTPS
 deploy/Caddyfile            HTTPS reverse proxy (domain from the DOMAIN variable)
 ```
