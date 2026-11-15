@@ -1,11 +1,11 @@
-# PulSAR — feel the Amazon's pulse from space
+# Ara — feel the Amazon's pulse from space
 
 **NASA Space Apps Challenge 2026 · Challenge: _Dancing with the SARs_**
 
-> **Pul**se of the waters + **SAR** radar: the NISAR radar sees the Amazon breathe through the clouds — water, fire and energy.
+> In Tupi, ***ara*** means time, weather and world. The NISAR radar reads the Amazon's time — its yearly pulse of flood and drought — through clouds and canopy, and shows who is affected: water, fire and energy.
 
 🌐 **Live demo:** https://ricardo-ramos1.github.io/pulsar-amazonia/  
-🎬 **Project demo (7 slides):** https://ricardo-ramos1.github.io/pulsar-amazonia/pitch/ · [PDF](https://ricardo-ramos1.github.io/pulsar-amazonia/pitch/PulSAR-demo.pdf)
+🎬 **Project demo (7 slides):** https://ricardo-ramos1.github.io/pulsar-amazonia/pitch/ · [PDF](https://ricardo-ramos1.github.io/pulsar-amazonia/pitch/Ara-demo.pdf)
 
 Every year the Amazon's rivers rise and fall by more than ten meters. El Niño can turn that rhythm into extreme drought, wildfire and power shortages for millions of people. This project follows that pulse with **NISAR**, the NASA-ISRO L-band radar that sees through clouds and even detects water **beneath the forest canopy**.
 

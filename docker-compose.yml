@@ -1,4 +1,4 @@
-# PulSAR — publish the web app.
+# Ara — publish the web app.
 #
 #   docker compose up -d --build                       -> http://<server>:8080
 #   DOMAIN=your-domain.org docker compose --profile https up -d --build
