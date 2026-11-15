@@ -9,7 +9,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://ricardo-ramos1.github.io/pulsar-amazonia/" />
   <meta property="og:title" content="PulSAR — feel the Amazon's pulse from space" />
-  <meta property="og:description" content="NISAR radar sees the Amazon breathe through the clouds: water, fire and energy. NASA Space Apps 2026." />
+  <meta property="og:description" content="NISAR radar sees the Amazon breathe through the clouds — and who lives by the water, the fire and the smoke. NASA Space Apps 2026." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>" />
 </head>
 <body data-mode="rios">
@@ -21,6 +21,9 @@
   </nav>
   <div id="map"></div>
 
+  <!-- card pinned by clicking a population column on the map -->
+  <div id="pick" class="pick" hidden></div>
+
   <!-- feature dock: the things the user acts on get their own place, over the map -->
   <section id="dock" class="only-agora only-energia" aria-label="Highlights">
     <div class="dock-head">
@@ -31,22 +34,18 @@
   </section>
 
   <aside id="panel">
-    <header>
+    <header class="brand">
       <h1>PulSAR</h1>
-      <p class="sub">Feel the Amazon's pulse from space — NISAR radar, El Niño and people</p>
-    </header>
-
-    <div class="row tight">
       <select id="aoi" aria-label="Study area"></select>
-    </div>
-    <p id="story" class="story"></p>
+    </header>
+    <div id="enso-now" class="enso-chip"></div>
 
-    <div id="enso-now" class="badge"></div>
+    <!-- the people affected: the headline of every view -->
+    <div id="hero" class="hero"></div>
 
     <!-- shared radar timeline (rivers + fire) -->
     <section class="only-rios only-fogo">
-      <h2>NISAR radar <span class="info" title="Each date is one NISAR overpass (L-band, HH polarization). Drag to watch the river change.">ⓘ</span></h2>
-      <input id="date" type="range" min="0" max="0" value="0" />
+      <input id="date" type="range" min="0" max="0" value="0" aria-label="NISAR date" />
       <div id="date-label" class="muted"></div>
     </section>
 
@@ -54,65 +53,78 @@
     <section class="only-rios">
       <div id="river-stats" class="stats"></div>
       <div id="validation" class="line"></div>
-      <p class="enso-link"><b>🌡️ El Niño link</b> El Niño shifts tropical winds and cuts Amazon rainfall; the river answers
-        months later. Record drought in 2023 (El Niño), record flood in 2021 (La Niña). ENSO is the second driver of the
-        river forecast.</p>
-      <div class="toggles">
-        <label><input type="checkbox" id="t-sar" checked /> Radar</label>
-        <label><input type="checkbox" id="t-opt" /> Optical</label>
-        <label><input type="checkbox" id="t-pop" checked /> 3D population</label>
+      <div class="enso-link">
+        <div class="enso-head">🌡️ El Niño link <span class="evidence ev-strong">clear in strong events</span></div>
+        After a strong El Niño the Rio Negro bottoms out at <b>16.4 m</b> on average; after a strong La Niña,
+        <b>19.4 m</b> — about 3 m apart (neutral 17.5 m).
+        <span class="info" title="Sep–Nov minimum of the Manaus gauge vs. the preceding Dec–Feb ONI, 1951–2026 (76 years): strong El Niño (ONI ≥ 1.0, 10 years), strong La Niña (≤ −1.0, 9 years), neutral (|ONI| &lt; 0.5, 26 years). Year by year the correlation is modest (Spearman −0.24): weak events and other oceans (the tropical Atlantic in 2023) also matter. ENSO is the second driver of the river forecast.">ⓘ</span>
       </div>
-      <div class="legend">
-        <span><i style="background:#1f78f2"></i>Open water</span>
-        <span><i style="background:#1ad9bf"></i>Flooded forest</span>
-        <span><i style="background:#bf8cf2"></i>Urban</span>
-        <span><i style="background:#f59e0b"></i>People by the water</span>
-        <span><i style="background:repeating-linear-gradient(135deg,#8c99ad 0 2px,transparent 2px 5px)"></i>No radar coverage
-          <span class="info" title="Areas no NISAR pass covered within 12 days of the date: shown hatched, never guessed. In Tefé (Jun–Jul) one frame of the main pass was delivered without valid measurements (values near −54 dB, below the radar's noise floor) and no other pass covers that block.">ⓘ</span></span>
-      </div>
+      <details class="layers">
+        <summary>Layers &amp; legend</summary>
+        <div class="toggles">
+          <label><input type="checkbox" id="t-sar" checked /> Radar</label>
+          <label><input type="checkbox" id="t-opt" /> Optical</label>
+          <label><input type="checkbox" id="t-pop" checked /> 3D population</label>
+        </div>
+        <div class="legend">
+          <span><i style="background:#1f78f2"></i>Open water</span>
+          <span><i style="background:#1ad9bf"></i>Flooded forest</span>
+          <span><i style="background:#bf8cf2"></i>Urban</span>
+          <span><i style="background:#f59e0b"></i>People by the water</span>
+          <span><i style="background:repeating-linear-gradient(135deg,#8c99ad 0 2px,transparent 2px 5px)"></i>No radar coverage
+            <span class="info" title="Areas no NISAR pass covered within 12 days of the date: shown hatched, never guessed. In Tefé (Jun–Jul) one frame of the main pass was delivered without valid measurements (values near −54 dB, below the radar's noise floor) and no other pass covers that block.">ⓘ</span></span>
+        </div>
+      </details>
     </section>
 
     <!-- FIRE -->
     <section class="only-fogo">
       <div id="fire-stats" class="stats"></div>
       <div id="scar-line" class="line"></div>
-      <p class="enso-link"><b>🌡️ El Niño link</b> El Niño alone barely moves fire counts (+1%). What matters is drought
-        reaching the river: low-river years bring +39% fire. The baseline is human (deforestation); climate sets how much
-        of it burns.</p>
-      <div class="toggles">
-        <label><input type="checkbox" id="t-fire" checked /> Fires (60 days)</label>
-        <label><input type="checkbox" id="t-scar" checked /> Burn scars</label>
-        <label><input type="checkbox" id="t-popf" checked /> 3D population</label>
+      <div class="enso-link indirect">
+        <div class="enso-head">🌡️ El Niño link <span class="evidence ev-indirect">indirect</span></div>
+        El Niño by itself barely moves fire (<b>+1%</b>). Fire follows the drought that reaches the river:
+        low-river years bring <b>+39%</b>.
+        <span class="info" title="Aug–Oct fire season vs. the mean of the previous 3 years (24 seasons). Low river = Sep–Nov minimum below 16.3 m at Manaus. The fire baseline is human (deforestation); climate modulates how much of it burns.">ⓘ</span>
       </div>
-      <div class="legend">
-        <span><i class="dot" style="background:#ff3b1f"></i>FIRMS fire</span>
-        <span><i style="background:#e11d48"></i>Burn scar (radar)</span>
-        <span><i style="background:#f97316"></i>People near fire</span>
-      </div>
+      <details class="layers">
+        <summary>Layers &amp; legend</summary>
+        <div class="toggles">
+          <label><input type="checkbox" id="t-fire" checked /> Fires (60 days)</label>
+          <label><input type="checkbox" id="t-scar" checked /> Burn scars</label>
+          <label><input type="checkbox" id="t-popf" checked /> 3D population</label>
+        </div>
+        <div class="legend">
+          <span><i class="dot" style="background:#ff3b1f"></i>FIRMS fire</span>
+          <span><i style="background:#e11d48"></i>Burn scar (radar)</span>
+          <span><i style="background:#f97316"></i>People near fire</span>
+        </div>
+      </details>
     </section>
 
     <!-- FIRE NOW -->
     <section class="only-agora">
-      <div id="now-head" class="muted"></div>
       <div id="now-stats" class="stats"></div>
-      <p class="enso-link"><b>🌡️ El Niño link</b> The short-term effect: hotter, drier air pushes the Angström index into
-        the danger range, and with little rain the smoke lingers over towns for days.</p>
-      <h2>Wind forecast <span class="info" title="Arrows show where the wind blows to (Open-Meteo hourly forecast). Smoke and fire tend to follow it.">ⓘ</span></h2>
-      <input id="hour" type="range" min="0" max="23" value="0" />
-      <div id="hour-label" class="muted"></div>
-      <div class="toggles">
-        <label><input type="checkbox" id="t-now-fire" checked /> Fires (48 h)</label>
-        <label><input type="checkbox" id="t-wind" checked /> Wind</label>
-        <label><input type="checkbox" id="t-smoke" checked /> Smoke</label>
-        <label><input type="checkbox" id="t-popn" checked /> 3D population</label>
-      </div>
-      <div class="legend">
-        <span><i class="dot" style="background:#dc2626"></i>Very high risk</span>
-        <span><i class="dot" style="background:#f97316"></i>High</span>
-        <span><i class="dot" style="background:#facc15"></i>Moderate</span>
-        <span><i class="dot" style="background:#6b7280"></i>Low</span>
-        <span><i style="background:#c084fc"></i>People in the smoke path</span>
-      </div>
+      <div class="row-label">Wind forecast <span id="hour-label" class="muted"></span>
+        <span class="info" title="Arrows show where the wind blows to (Open-Meteo hourly forecast). Smoke and fire tend to follow it.">ⓘ</span></div>
+      <input id="hour" type="range" min="0" max="23" value="0" aria-label="Forecast hour" />
+      <div id="now-head" class="muted"></div>
+      <details class="layers">
+        <summary>Layers &amp; legend</summary>
+        <div class="toggles">
+          <label><input type="checkbox" id="t-now-fire" checked /> Fires (48 h)</label>
+          <label><input type="checkbox" id="t-wind" checked /> Wind</label>
+          <label><input type="checkbox" id="t-smoke" checked /> Smoke</label>
+          <label><input type="checkbox" id="t-popn" checked /> 3D population</label>
+        </div>
+        <div class="legend">
+          <span><i class="dot" style="background:#dc2626"></i>Very high risk</span>
+          <span><i class="dot" style="background:#f97316"></i>High</span>
+          <span><i class="dot" style="background:#facc15"></i>Moderate</span>
+          <span><i class="dot" style="background:#6b7280"></i>Low</span>
+          <span><i style="background:#c084fc"></i>People in the smoke path</span>
+        </div>
+      </details>
       <p class="note">Indicative only — not an official warning. <span class="info" title="Risk = Angström index (air humidity and temperature) at the driest hour of the next 24 h, adjusted for forecast rain and gusts. Smoke = 40 km sector downwind of the mean 12 h wind (a 10 km circle when the wind is calm).">ⓘ</span></p>
     </section>
 
@@ -120,31 +132,42 @@
     <section class="only-energia">
       <div id="energy-stats" class="stats"></div>
       <div id="diesel-line" class="line"></div>
-      <p class="enso-link"><b>🌡️ El Niño link</b> Less rain, less water at the plants: inflow to Balbina (Manaus' supply)
-        falls with El Niño (ρ = −0.68), and run-of-river plants made 54% of normal in the 2024 drought. Low rivers also
-        stop the diesel barges that power isolated towns.</p>
-      <div class="toggles">
-        <label><input type="checkbox" id="t-solar" checked /> Solar potential <span class="info" title="NASA POWER annual mean irradiance (GHI). The source grid is 1° (~110 km); the smooth relief is a visual interpolation only and adds no information. Colors are relative to this area.">ⓘ</span></label>
-        <label><input type="checkbox" id="t-plants" checked /> Hydropower plants</label>
+      <div class="enso-link">
+        <div class="enso-head">🌡️ El Niño link <span class="evidence ev-strong">strong</span></div>
+        Less rain, less water: inflow to <b>Balbina</b>, the reservoir that serves Manaus, falls with El Niño
+        (<b>ρ = −0.68</b>). Run-of-river plants made 54% of normal in the 2024 drought.
+        <span class="info" title="Spearman correlation across years between Balbina's Sep–Nov inflow and the Jul–Sep ONI (ONS data). Low rivers also stop the diesel barges that power isolated towns.">ⓘ</span>
       </div>
-      <div class="legend">
-        <span><i style="background:#22c55e"></i>Normal inflow</span>
-        <span><i style="background:#f59e0b"></i>Below normal</span>
-        <span><i style="background:#dc2626"></i>Far below (&lt; 60%)</span>
-        <span id="solar-legend"></span>
-      </div>
+      <details class="layers">
+        <summary>Layers &amp; legend</summary>
+        <div class="toggles">
+          <label><input type="checkbox" id="t-solar" checked /> Solar potential <span class="info" title="NASA POWER annual mean irradiance (GHI). The source grid is 1° (~110 km); the smooth relief is a visual interpolation only and adds no information. Colors are relative to this area.">ⓘ</span></label>
+          <label><input type="checkbox" id="t-plants" checked /> Hydropower plants</label>
+        </div>
+        <div class="legend">
+          <span><i style="background:#22c55e"></i>Normal inflow</span>
+          <span><i style="background:#f59e0b"></i>Below normal</span>
+          <span><i style="background:#dc2626"></i>Far below (&lt; 60%)</span>
+          <span id="solar-legend"></span>
+        </div>
+      </details>
     </section>
   </aside>
 
+  <!-- evidence: one chart at a time, opened on click -->
   <aside id="charts">
+    <h2 class="ev-title">The evidence <span class="muted">click to open</span></h2>
+
     <!-- RIVERS -->
-    <div class="chart-box only-rios">
-      <h2>El Niño × Rio Negro level <span class="info" title="Bars: ONI (red = El Niño, blue = La Niña). Line: monthly mean of the Manaus river gauge (ANA).">ⓘ</span></h2>
+    <details class="chart-card only-rios" name="evidence">
+      <summary>🌡️ El Niño × Rio Negro level</summary>
+      <p class="note">Bars: ONI (red = El Niño, blue = La Niña). Line: monthly mean of the Manaus river gauge (ANA).</p>
       <canvas id="chart-enso"></canvas>
-    </div>
-    <div class="chart-box only-rios only-fogo">
+    </details>
+    <details class="chart-card only-rios only-fogo" name="evidence">
+      <summary><span>📈 <span id="fc-title">ML forecast</span></span></summary>
       <div class="row">
-        <h2>ML forecast <span class="info" title="Out-of-sample test with a time-based split. Skill = 1 − MSE / MSE of climatology: above 0 beats the historical average.">ⓘ</span></h2>
+        <span class="note">Out-of-sample, time-based split. Skill &gt; 0 beats the historical average.</span>
         <span>
           <select id="target"></select>
           <select id="horizon"><option value="1">1 month</option><option value="3" selected>3 months</option><option value="6">6 months</option></select>
@@ -153,40 +176,45 @@
       <canvas id="chart-forecast"></canvas>
       <table id="metrics"></table>
       <p id="fc-line" class="line"></p>
-    </div>
+    </details>
 
     <!-- FIRE -->
-    <div class="chart-box only-fogo">
-      <h2>Fires per year in Amazonas <span class="info" title="NASA FIRMS / MODIS, vegetation fires only. Red bars = El Niño in Jul–Sep. Current year is partial.">ⓘ</span></h2>
+    <details class="chart-card only-fogo" name="evidence">
+      <summary>🔥 Fires per year in Amazonas</summary>
+      <p class="note">NASA FIRMS / MODIS, vegetation fires only. Red bars = El Niño in Jul–Sep. Current year is partial.</p>
       <canvas id="chart-fire"></canvas>
       <p id="fire-mod" class="line"></p>
-    </div>
+    </details>
 
     <!-- ENERGY -->
-    <div class="chart-box only-energia">
+    <details class="chart-card only-energia" name="evidence">
+      <summary><span>💧 Water × power at <span id="plant-name">the plant</span></span></summary>
       <div class="row">
-        <h2>Water × power <span class="info" title="Bars: mean monthly generation (MW, ONS). Line: inflow reaching the plant (m³/s); dashed = monthly normal (2016–2022).">ⓘ</span></h2>
+        <span class="note">Bars: generation (MW). Line: inflow (m³/s); dashed = normal (2016–2022).</span>
         <select id="plant-sel"></select>
       </div>
       <canvas id="chart-hydro"></canvas>
       <p id="hydro-line" class="line"></p>
-    </div>
-    <div class="chart-box only-energia">
-      <h2>Dry season (Sep–Nov), year by year <span class="info" title="Capacity factor = generation ÷ installed capacity. Red bars = El Niño years (Jul–Sep ONI ≥ 0.5).">ⓘ</span></h2>
+    </details>
+    <details class="chart-card only-energia" name="evidence">
+      <summary>📉 Dry season (Sep–Nov), year by year</summary>
+      <p class="note">Capacity factor = generation ÷ installed capacity. Red bars = El Niño years (Jul–Sep ONI ≥ 0.5).</p>
       <canvas id="chart-dry"></canvas>
-    </div>
-    <div class="chart-box only-energia">
-      <h2>Sun × smoke <span class="info" title="NASA POWER at the center of the area: mean monthly solar irradiance (bars) and aerosols/smoke (line, AOD at 550 nm).">ⓘ</span></h2>
+    </details>
+    <details class="chart-card only-energia" name="evidence">
+      <summary>☀️ Sun × smoke</summary>
+      <p class="note">NASA POWER at the center of the area: solar irradiance (bars) and aerosols/smoke (line, AOD 550 nm).</p>
       <canvas id="chart-solar"></canvas>
       <p id="solar-line" class="line"></p>
-    </div>
+    </details>
 
     <!-- FIRE NOW -->
-    <div class="chart-box only-agora">
-      <h2>Next 72 h <span class="info" title="Center of the area. Angström index: below 2.0 = very favorable to fire; 2.0–2.5 = favorable; above 4 = fire unlikely.">ⓘ</span></h2>
+    <details class="chart-card only-agora" name="evidence">
+      <summary>🌬️ Next 72 h: fire weather</summary>
+      <p class="note">Center of the area. Angström index below 2.0 = very favorable to fire; above 4 = unlikely.</p>
       <canvas id="chart-now"></canvas>
       <p id="now-line" class="line"></p>
-    </div>
+    </details>
   </aside>
 
   <script type="module" src="/src/main.js"></script>

@@ -280,7 +280,7 @@ function render() {
     }
   }
 
-  overlay.setProps({ layers: L, getTooltip });
+  overlay.setProps({ layers: L, getTooltip, onClick: showPick });
 }
 
 function getTooltip(info) {
@@ -347,8 +347,7 @@ function updateTimeline() {
   $('river-stats').innerHTML = `
     <div><b>${fmt(sc.water_km2)} km²</b>open water</div>
     <div><b>${fmt(sc.flooded_forest_km2)} km²</b>flooded forest</div>
-    <div style="grid-column:span 2"><b>${fmt(sc.pop_near_water)}</b>people living by the water</div>
-    ${sc.coverage != null ? `<div style="grid-column:span 2">radar covers <b style="display:inline;font-size:13px">${pct(sc.coverage)}</b> of the area${
+    ${sc.coverage != null ? `<div class="wide-note" style="grid-column:span 2">radar covers <b style="display:inline;font-size:13px">${pct(sc.coverage)}</b> of the area${
       fillerText(sc.filler_dates)}</div>` : ''}`;
   const v = state.validation?.scenes.find((x) => x.sar_date === sc.date);
   $('validation').innerHTML = !v ? '' : v.ref_reliable === false
@@ -359,18 +358,16 @@ function updateTimeline() {
 
   // fire
   const f = firesForScene();
-  const near = state.nearFire && state.popWide
-    ? state.popWide.cells.reduce((s, c, i) => s + (state.nearFire[i] ? c[2] : 0), 0) : null;
   $('fire-stats').innerHTML = `
-    <div><b>${fmt(f.length)}</b>fires in 60 days</div>
-    <div><b>${fmt(f.reduce((s, r) => s + r[3], 0) / 1000, 1)} GW</b>total radiative power</div>
-    ${near != null ? `<div style="grid-column:span 2"><b>${fmt(near)}</b>people within ${FIRE_NEAR_KM} km of a fire</div>` : ''}`;
+    <div><b>${fmt(f.length)}</b>fires in the 60 days before</div>
+    <div><b>${fmt(f.reduce((s, r) => s + r[3], 0) / 1000, 1)} GW</b>total radiative power</div>`;
   const s = state.scars;
   $('scar-line').innerHTML = s?.n_patches
     ? `🛰️ <b>${s.n_patches}</b> burn scars seen by radar (${s.from.slice(5)} → ${s.to.slice(5)}); <b>${pct(s.confirm_rate)}</b> have a
        FIRMS fire nearby, vs. ${pct(s.control_rate_random_forest)} for random forest points.
        <span class="info" title="Forest HV backscatter dropping more than 3 dB beyond the scene's normal change. Scars without a fire may be deforestation or understory fire.">ⓘ</span>`
     : s ? '🛰️ No burn scars detected by radar.' : '';
+  updateHero();
 }
 
 function updateNowPanel() {
@@ -380,10 +377,69 @@ function updateNowPanel() {
   $('now-head').textContent = `Snapshot of ${nw.generated_local} (Manaus time)`;
   $('now-stats').innerHTML = `
     <div><b>${fmt(nw.n_fires)}</b>fires in 48 h</div>
-    <div><b>${fmt(counts['very high'] + counts.high)}</b>clusters at high risk</div>
-    <div style="grid-column:span 2"><b>${fmt(nw.people_downwind)}</b>people in the smoke path (≤ ${nw.smoke_km} km)</div>`;
+    <div><b>${fmt(counts['very high'] + counts.high)}</b>clusters at high risk</div>`;
   updateHourLabel();
+  updateHero();
   renderDock();
+}
+
+// ---------------------------------------------------------------- hero: the people affected, per view
+const k = (n) => (n >= 1e6 ? `${fmt(n / 1e6, 1)} million` : n >= 1e4 ? `${fmt(n / 1e3, 0)} thousand` : fmt(n));
+
+function updateHero() {
+  const box = $('hero');
+  if (!box) return;
+  const sc = currentScene();
+  let big = '', label = '', story = '';
+  if (state.mode === 'rios' && sc) {
+    big = k(sc.pop_near_water); label = 'people live by the water';
+    const first = state.sar.scenes[0];
+    story = sc === first
+      ? `On ${sc.date} the radar sees ${fmt(sc.water_km2)} km² of open water and ${fmt(sc.flooded_forest_km2)} km² of flooded forest around them. Drag the date to watch the river fall.`
+      : `On ${sc.date}: ${fmt(sc.flooded_forest_km2)} km² of flooded forest left — ${pct(1 - sc.flooded_forest_km2 / first.flooded_forest_km2)} less than in ${first.date.slice(0, 7)}.`;
+  } else if (state.mode === 'fogo' && sc) {
+    const near = state.nearFire && state.popWide
+      ? state.popWide.cells.reduce((s, c, i) => s + (state.nearFire[i] ? c[2] : 0), 0) : 0;
+    big = k(near); label = `people within ${FIRE_NEAR_KM} km of a fire`;
+    const s = state.scars;
+    story = s?.n_patches
+      ? `In the 60 days before ${sc.date}. The radar found ${s.n_patches} burn scars — ${pct(s.confirm_rate)} confirmed by fire satellites.`
+      : `In the 60 days before ${sc.date}.`;
+  } else if (state.mode === 'agora' && state.now) {
+    const nw = state.now;
+    big = k(nw.people_downwind); label = 'people in the smoke path now';
+    const hi = nw.clusters.filter((c) => c.danger === 'very high' || c.danger === 'high').length;
+    story = `${fmt(nw.n_fires)} fires in the last 48 h; ${hi} clusters face high fire weather in the next 24 h.`;
+  } else if (state.mode === 'energia' && state.popWide) {
+    big = k(state.popWide.total); label = 'people in this region depend on the river for power and fuel';
+    const b = state.energy?.plants.find((p) => p.name === 'Balbina');
+    story = b ? `Balbina, the reservoir that serves Manaus, is receiving ${pct(b.last.inflow_pct)} of its normal water (${b.last.date}).` : '';
+  }
+  box.innerHTML = big ? `<div class="hero-big">${big}</div><div class="hero-label">${label}</div><p class="hero-story">${story}</p>` : '';
+}
+
+// ---------------------------------------------------------------- click card: who lives here
+function showPick(info) {
+  const box = $('pick');
+  const { object, index, layer } = info ?? {};
+  if (!object || !['pop', 'popf', 'popn'].includes(layer?.id)) { box.hidden = true; return; }
+  const dens = object[2];
+  let line = '';
+  if (layer.id === 'pop') {
+    const c = sceneCells(currentScene()).get(index);
+    line = c ? `${pct(c[0])} open water · ${pct(c[1])} flooded forest in this km² on ${currentScene().date}` : 'no water detected in this km² on this date';
+  } else if (layer.id === 'popf') {
+    const n = state.nearFire?.[index] ?? 0;
+    line = n ? `${n} fire${n > 1 ? 's' : ''} within ${FIRE_NEAR_KM} km in the 60 days before ${currentScene().date}` : `no fire within ${FIRE_NEAR_KM} km`;
+  } else {
+    line = new Set(state.now.downwind_cells).has(index) ? 'in the smoke path of an active fire' : 'outside the forecast smoke path';
+  }
+  box.innerHTML = `<button class="pick-x" aria-label="Close">×</button>
+    <div class="pick-big">~${fmt(dens)} <span>people in this km²</span></div>
+    <div class="pick-line">${line}</div>
+    <div class="muted">${object[1].toFixed(3)}, ${object[0].toFixed(3)} · WorldPop 2020</div>`;
+  box.hidden = false;
+  box.querySelector('.pick-x').onclick = () => { box.hidden = true; };
 }
 
 // ---------------------------------------------------------------- feature dock (cards over the map)
@@ -446,9 +502,9 @@ function ensoBadge(oni) {
   const cls = v >= 0.5 ? 'nino' : v <= -0.5 ? 'nina' : 'neutral';
   const name = v >= 0.5 ? 'El Niño' : v <= -0.5 ? 'La Niña' : 'ENSO-neutral';
   const strength = Math.abs(v) >= 2 ? 'Very strong ' : Math.abs(v) >= 1.5 ? 'Strong ' : Math.abs(v) >= 1 ? 'Moderate ' : '';
-  $('enso-now').className = `badge ${cls}`;
-  $('enso-now').innerHTML = `<strong>${v > 0 ? '+' : ''}${fmt(v, 2)} °C</strong>${strength}${name} now
-    <span class="info" title="Oceanic Niño Index (NOAA), 3-month season centered on ${oni.dates.at(-1)}">ⓘ</span>`;
+  $('enso-now').className = `enso-chip ${cls}`;
+  $('enso-now').innerHTML = `<b>${strength}${name}</b> now · ONI ${v > 0 ? '+' : ''}${fmt(v, 2)} °C
+    <span class="info" title="Oceanic Niño Index (NOAA), 3-month season centered on ${oni.dates.at(-1)}. Above +0.5 °C = El Niño, below −0.5 °C = La Niña.">ⓘ</span>`;
 }
 
 function ensoChart() {
@@ -484,6 +540,7 @@ function ensoChart() {
 
 function forecastChart() {
   const fc = state.forecasts?.[$('target').value];
+  $('fc-title').textContent = `${$('target').selectedOptions[0]?.textContent ?? 'ML'} forecast`;
   charts.fc?.destroy();
   if (!fc) { $('metrics').innerHTML = ''; $('fc-line').textContent = 'No model for this target.'; return; }
   const H = fc.horizons[$('horizon').value];
@@ -593,10 +650,10 @@ function energyPanel() {
   const risk = e.diesel?.forecast?.find((f) => f.h === 1) ?? e.diesel?.forecast?.[0]; // next month is the actionable one
   $('energy-stats').innerHTML = `
     <div><b>${fmt(capGW, 1)} GW</b>of hydropower on the map</div>
-    ${worst ? `<div><b>${pct(worst[1])}</b>of normal output in the ${worst[0]} drought</div>` : ''}
-    ${sol ? `<div><b>${fmt(sol.ghi_annual, 1)} kWh/m²</b>of sun per day (mean)</div>
-             <div><b>−${fmt(sol.smoke_loss_pct, 0)}%</b>sunlight under heavy smoke</div>` : ''}`;
+    ${worst ? `<div><b>${pct(worst[1])}</b>of normal output in the ${worst[0]} drought</div>` : ''}`;
+  void sol; // sun × smoke figures live in their own evidence card
   renderDock();
+  updateHero();
   $('diesel-line').innerHTML = risk
     ? `⛽ Chance of a <b>severe drought</b> on the Rio Negro in ${risk.target_date}: <b>${pct(risk.prob_severe)}</b>
        <span class="info" title="Severe drought = ${e.diesel.definition}: below ${fmt(e.diesel.threshold_m, 1)} m. In such droughts river transport is restricted and the diesel that powers isolated communities cannot get through (2023, 2024). Probability from the river model's P10–P90 forecast.">ⓘ</span>`
@@ -606,6 +663,7 @@ function energyPanel() {
 function selectPlant(name, fly = false) {
   state.plant = name;
   $('plant-sel').value = name;
+  $('plant-name').textContent = name;
   renderDock();
   const p = state.energy?.plants.find((x) => x.name === name);
   if (fly && p) map.flyTo({ center: [p.lon, p.lat], zoom: 7.5, pitch: 50, bearing: -20, duration: 1200 });
@@ -713,6 +771,8 @@ function setMode(mode) {
     forecastChart();
   }
   renderDock();
+  updateHero();
+  $('pick').hidden = true;
   fitView();
   render();
 }
@@ -748,7 +808,7 @@ async function selectAoi(key) {
   state.aoi = key;
   state.idx = 0;
   state.idxTouched = false;
-  $('story').textContent = state.aois[key].story;
+  $('aoi').title = state.aois[key].story;
   const g = (p) => getJSON(`data/${p}`);
   const [pop, popWide, sar, river, fcPrecip, fcRiver, validation, firePts, scars, now] = await Promise.all([
     g(`population_${key}.json`), g(`population_${key}_wide.json`), g(`sar_${key}.json`), g(`river_${key}.json`),
@@ -789,6 +849,7 @@ async function init() {
   if (energy) {
     $('plant-sel').innerHTML = energy.plants.map((p) => `<option>${p.name}</option>`).join('');
     $('plant-sel').onchange = (e) => selectPlant(e.target.value, true);
+    $('plant-name').textContent = state.plant;
   }
   ensoBadge(oni);
   fireChart();
@@ -813,6 +874,10 @@ async function init() {
     };
   }
 
+  // evidence cards: a chart drawn while its card was closed has no size, so resize it when the card opens
+  document.querySelectorAll('details.chart-card').forEach((d) => {
+    d.addEventListener('toggle', () => { if (d.open) Object.values(charts).forEach((c) => c?.resize()); });
+  });
   window.addEventListener('hashchange', () => setMode(modeFromHash(location.hash.slice(1))));
   state.mode = modeFromHash(location.hash.slice(1)) ?? 'rios';
   await selectAoi(Object.keys(aois)[0]);
