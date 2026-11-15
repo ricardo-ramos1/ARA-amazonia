@@ -82,7 +82,6 @@ web/                        Vite + deck.gl + MapLibre + Chart.js app
   public/pitch/             the 7-slide project demo (HTML; ←/→ to navigate) and its PDF
   Dockerfile, nginx.conf    site image (Node build → nginx)
 .github/workflows/pages.yml builds web/ and publishes it to GitHub Pages on every push that changes web/
-scripts/export_pitch.py     re-exports the demo slides to PNG/PDF with headless Edge/Chrome
 docker-compose.yml          publishes the site; --profile https adds Caddy for the domain's HTTPS
 deploy/Caddyfile            HTTPS reverse proxy (domain from the DOMAIN variable)
 ```
