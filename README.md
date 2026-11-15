@@ -4,8 +4,8 @@
 
 > In Tupi, ***ara*** means time, weather and world. The NISAR radar reads the Amazon's time — its yearly pulse of flood and drought — through clouds and canopy, and shows who is affected: water, fire and energy.
 
-🌐 **Live demo:** https://ricardo-ramos1.github.io/pulsar-amazonia/  
-🎬 **Project demo (7 slides):** https://ricardo-ramos1.github.io/pulsar-amazonia/pitch/ · [PDF](https://ricardo-ramos1.github.io/pulsar-amazonia/pitch/Ara-demo.pdf)
+🌐 **Live demo:** https://ricardo-ramos1.github.io/ARA-amazonia/  
+🎬 **Project demo (7 slides):** https://ricardo-ramos1.github.io/ARA-amazonia/pitch/ · [PDF](https://ricardo-ramos1.github.io/ARA-amazonia/pitch/Ara-demo.pdf)
 
 Every year the Amazon's rivers rise and fall by more than ten meters. El Niño can turn that rhythm into extreme drought, wildfire and power shortages for millions of people. This project follows that pulse with **NISAR**, the NASA-ISRO L-band radar that sees through clouds and even detects water **beneath the forest canopy**.
 
@@ -145,7 +145,7 @@ npm run dev
 
 ### 5. Publish
 
-**GitHub Pages (the live demo).** `.github/workflows/pages.yml` builds `web/` and publishes it to https://ricardo-ramos1.github.io/pulsar-amazonia/ whenever a push to `main` changes `web/`. One-time setup: repository *Settings → Pages → Source: GitHub Actions*. To refresh the data online, re-run the pipeline locally and push.
+**GitHub Pages (the live demo).** `.github/workflows/pages.yml` builds `web/` and publishes it to https://ricardo-ramos1.github.io/ARA-amazonia/ whenever a push to `main` changes `web/`. One-time setup: repository *Settings → Pages → Source: GitHub Actions*. To refresh the data online, re-run the pipeline locally and push.
 
 **Your own domain (Docker).**
 

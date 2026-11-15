@@ -9,7 +9,7 @@
 services:
   web:
     build: ./web
-    image: pulsar-amazonia:latest
+    image: ara-amazonia:latest
     restart: unless-stopped
     ports:
       - "${PORT:-8080}:80"
