@@ -4,6 +4,7 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import { BitmapLayer, ColumnLayer, LineLayer, PathLayer, PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import { Chart, registerables } from 'chart.js';
 import './style.css';
+import { GLOSSARY } from './glossary.js';
 
 Chart.register(...registerables);
 Chart.defaults.color = '#8b98a8';
@@ -353,7 +354,7 @@ function updateTimeline() {
   $('validation').innerHTML = !v ? '' : v.ref_reliable === false
     ? `<span class="warn">⚠ Optical view blocked by haze/smoke</span> — the radar sees through it, Sentinel-2 does not.
        <span class="info" title="Sentinel-2 (${v.s2_images[0]?.slice(0, 10)}) recognizes only ${pct(v.ref_perm_water_detected)} of the permanent river as water, so it cannot be used as a reference on this date.">ⓘ</span>`
-    : `✓ Validated against Sentinel-2: <b>F1 ${fmt(v.f1, 2)}</b>
+    : `✓ Validated against <span class="term" data-term="Sentinel-2">Sentinel-2</span>: <b class="term" data-term="F1">F1 ${fmt(v.f1, 2)}</b>
        <span class="info" title="Radar water vs. Sentinel-2 MNDWI (${v.s2_images[0]?.slice(0, 10)}). Precision ${pct(v.precision)}, recall ${pct(v.recall)}, cloud-free area ${pct(v.coverage)}.">ⓘ</span>`;
 
   // fire
@@ -502,7 +503,7 @@ function ensoBadge(oni) {
   const name = v >= 0.5 ? 'El Niño' : v <= -0.5 ? 'La Niña' : 'ENSO-neutral';
   const strength = Math.abs(v) >= 2 ? 'Very strong ' : Math.abs(v) >= 1.5 ? 'Strong ' : Math.abs(v) >= 1 ? 'Moderate ' : '';
   $('enso-now').className = `enso-chip ${cls}`;
-  $('enso-now').innerHTML = `<b>${strength}${name}</b> now · ONI ${v > 0 ? '+' : ''}${fmt(v, 2)} °C
+  $('enso-now').innerHTML = `<b class="term" data-term="ENSO">${strength}${name}</b> now · <span class="term" data-term="ONI">ONI</span> ${v > 0 ? '+' : ''}${fmt(v, 2)} °C
     <span class="info" title="Oceanic Niño Index (NOAA), 3-month season centered on ${oni.dates.at(-1)}. Above +0.5 °C = El Niño, below −0.5 °C = La Niña.">ⓘ</span>`;
 }
 
@@ -575,7 +576,7 @@ function forecastChart() {
   if (fc.target === 'fire' && H.recent_years) rows.push(['Last 3 years', H.recent_years]);
   const best = Math.max(...rows.map((r) => r[1].skill_vs_clim));
   const dec = fc.target === 'fire' ? 0 : 2;
-  $('metrics').innerHTML = `<tr><th></th><th>Mean abs. error</th><th>Skill</th></tr>
+  $('metrics').innerHTML = `<tr><th></th><th class="term" data-term="MAE">Mean abs. error</th><th class="term" data-term="Skill">Skill</th></tr>
     ${rows.map(([name, m]) => `<tr><td>${name}</td><td>${fmt(m.mae, dec)} ${fc.unit}</td>
       <td class="${m.skill_vs_clim === best ? 'good' : ''}">${fmt(m.skill_vs_clim, 2)}</td></tr>`).join('')}`;
   const imp = H.importance ? Object.entries(H.importance).slice(0, 2).map(([g, v]) => `${g} ${pct(v)}`).join(', ') : '';
@@ -635,7 +636,7 @@ function nowChart() {
   });
   const dry = r.angstrom.filter((v) => v < 2).length;
   const rain = r.rain.reduce((a, b) => a + b, 0);
-  $('now-line').innerHTML = `<b>${dry} h</b> very favorable to fire in the next 72 h · ${fmt(rain, 1)} mm of rain expected`;
+  $('now-line').innerHTML = `<b>${dry} h</b> very favorable to fire (<span class="term" data-term="Angström">Angström</span> &lt; 2) in the next 72 h · ${fmt(rain, 1)} mm of rain expected`;
 }
 
 // ---------------------------------------------------------------- energy
@@ -744,6 +745,39 @@ function solarChart() {
   $('solar-line').innerHTML = `The dry season brings more sun but also more smoke: in the smokiest Aug–Oct months
     irradiance drops <b>${fmt(s.smoke_loss_pct, 0)}%</b>
     <span class="info" title="Smokiest Aug–Oct months (top quartile of AOD anomaly) vs. the cleanest, over ${s.n_months} months: ${fmt(s.loss_per_0_1_aod_pct, 1)}% less sun per +0.1 AOD (correlation ${fmt(s.corr_ghi_aod, 2)}). Clouds also vary with smoke, so this is an association, not an isolated measurement of the effect.">ⓘ</span>`;
+}
+
+// ---------------------------------------------------------------- glossary
+const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const gEntries = GLOSSARY.flatMap(([group, items]) => items.map(([term, def, aliases = []]) => ({
+  group, term, def, id: `g-${norm(term).replace(/[^a-z0-9]+/g, '-')}`, keys: [term, ...aliases].map(norm),
+})));
+
+function renderGlossary(q = '') {
+  const nq = norm(q.trim());
+  const hit = (e) => !nq || e.keys.some((k) => k.includes(nq)) || norm(e.def).includes(nq);
+  const groups = GLOSSARY.map(([g]) => [g, gEntries.filter((e) => e.group === g && hit(e))]).filter(([, es]) => es.length);
+  $('g-body').innerHTML = groups.length ? groups.map(([g, es]) => `<h4>${g}</h4><dl>${es.map((e) =>
+    `<div class="g-item" id="${e.id}"><dt>${e.term}</dt><dd>${e.def}</dd></div>`).join('')}</dl>`).join('')
+    : '<p class="muted">No term found.</p>';
+}
+
+function openGlossary(term) {
+  const dlg = $('glossary');
+  $('g-search').value = '';
+  renderGlossary();
+  if (!dlg.open) dlg.showModal();
+  const nt = term ? norm(term) : '';
+  const e = nt && (gEntries.find((x) => x.keys.includes(nt)) ?? gEntries.find((x) => x.keys.some((k) => k.startsWith(nt))));
+  if (e) {
+    const el = document.getElementById(e.id);
+    el.classList.add('flash');
+    el.scrollIntoView({ block: 'center' });
+    setTimeout(() => el.classList.remove('flash'), 1600);
+  } else {
+    $('g-body').scrollTop = 0;
+    $('g-search').focus();
+  }
 }
 
 // ---------------------------------------------------------------- story mode: a guided tour, people first
@@ -978,6 +1012,17 @@ async function init() {
   });
   window.addEventListener('hashchange', () => setMode(modeFromHash(location.hash.slice(1))));
   $('story-btn').onclick = () => storyGo(0);
+  $('glossary-btn').onclick = () => openGlossary();
+  $('g-close').onclick = () => $('glossary').close();
+  $('g-search').oninput = (e) => renderGlossary(e.target.value);
+  $('glossary').addEventListener('click', (e) => { if (e.target === $('glossary')) $('glossary').close(); }); // backdrop
+  // any underlined term (static or generated text) opens its glossary entry
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-term]');
+    if (!t || t.closest('#glossary')) return;
+    e.preventDefault();
+    openGlossary(t.dataset.term);
+  });
   document.addEventListener('keydown', (e) => {
     if (state.story == null) return;
     if (e.key === 'ArrowRight') storyGo(state.story + 1 < STORY.length ? state.story + 1 : state.story);

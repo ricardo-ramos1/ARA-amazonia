@@ -31,7 +31,7 @@ Machine-learning models forecast river level, rainfall and fire activity 1, 3 an
 
 ## How to read it
 
-Every view leads with **the people affected** — living by the water, near fires, in the smoke path, or depending on the river for power and fuel. **El Niño** is the second thread, shown only where our results support it and labelled by strength of evidence: *clear in strong events* (river level), *strong* (Balbina inflow) or *indirect* (fire, through drought that reaches the river). Charts are tucked into **evidence cards** that open on click; clicking a population column on the map shows who lives in that km². **▶ Tell me the story** runs a five-step guided tour — the pulse, the drought, the fire, the smoke today, the power — that doubles as the pitch script.
+Every view leads with **the people affected** — living by the water, near fires, in the smoke path, or depending on the river for power and fuel. **El Niño** is the second thread, shown only where our results support it and labelled by strength of evidence: *clear in strong events* (river level), *strong* (Balbina inflow) or *indirect* (fire, through drought that reaches the river). Charts are tucked into **evidence cards** that open on click; clicking a population column on the map shows who lives in that km². **▶ Tell me the story** runs a five-step guided tour — the pulse, the drought, the fire, the smoke today, the power — that doubles as the pitch script. **📖 Glossary** explains every technical term in plain language (37 terms, searchable); dotted-underlined words open their entry.
 
 ## The four views
 
