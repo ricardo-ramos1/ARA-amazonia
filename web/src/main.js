@@ -88,12 +88,15 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-left');
 // ?capture: hands the map to the demo-video recorder (submission/video) so it can drive the camera
 if (new URLSearchParams(location.search).has('capture')) window.__pulsarMap = map;
+if (import.meta.env.DEV) window.__map = map; // debugging aid in `npm run dev` only (stripped from the build)
 const overlay = new MapboxOverlay({ interleaved: false, layers: [] });
 map.addControl(overlay);
 
 // Relief shading from AWS Terrain Tiles (public, no key; SRTM-derived over the Amazon). Drawn by MapLibre under
 // the basemap labels, so deck.gl layers above stay aligned. Amazon is flat: exaggeration lifts terraces/valleys.
 map.on('load', () => {
+  // compact attribution starts expanded and covers the map on small screens: start it collapsed
+  document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
   map.addSource('dem', {
     type: 'raster-dem', encoding: 'terrarium', tileSize: 256, maxzoom: 12,
     tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
@@ -721,11 +724,13 @@ function fitView() {
   // on desktop the side panels float over the map: keep the area of interest in the visible middle
   const wide = innerWidth > 1100;
   const dockOn = state.mode === 'agora' || state.mode === 'energia'; // leave room for the card dock
-  const padding = wide ? { left: 420, right: 500, top: 90, bottom: dockOn ? 210 : 60 } : 40;
-  const pitch = state.mode === 'energia' ? 45 : 55;
+  const padding = wide ? { left: 420, right: 500, top: 90, bottom: dockOn ? 210 : 60 } : 16;
+  // portrait phones: a strong tilt squeezes the area into the middle third of the map
+  const pitch = !wide && innerWidth < 900 ? 35 : state.mode === 'energia' ? 45 : 55;
   // fitBounds is imprecise with a tilted camera: frame the area flat, then tilt around the same centre
   const cam = map.cameraForBounds([[w, s], [e, n]], { padding, bearing: 0, pitch: 0 });
-  if (cam) map.flyTo({ center: cam.center, zoom: cam.zoom - 0.15, pitch, bearing: -20, duration: 1000 });
+  const bearing = !wide && innerWidth < 900 ? 0 : -20; // a rotated rectangle overflows a narrow screen
+  if (cam) map.flyTo({ center: cam.center, zoom: cam.zoom - 0.15, pitch, bearing, duration: 1000 });
 }
 
 // radar water / flooded-forest fractions per wide 1 km population cell (sparse [index, water, flooded] -> Map)
